@@ -251,8 +251,9 @@ class TrainPage(QWidget):
         if self.conversion_dialog:self.conversion_dialog.done(0);self.conversion_dialog.deleteLater();self.conversion_dialog=None
         self.unlock_after_run();self.state.setText('Training and conversion complete' if success else 'Training complete. Conversion failed');self.refresh()
         if success:
-            self.log.appendPlainText('Inference model: '+str(self.inference_output))
-            QMessageBox.information(self,'Conversion Complete','Inference model saved:\n'+str(self.inference_output))
+            display_path=str(self.local_path(wsl_string(self.inference_output)))
+            self.log.appendPlainText('Inference model: '+display_path)
+            QMessageBox.information(self,'Conversion Complete','Inference model saved:\n'+display_path)
         else:
             detail=self.conversion_error or 'See Training Log for details.'
             QMessageBox.warning(self,'Conversion Failed','Training completed. The full training checkpoint is preserved.\n'+detail)

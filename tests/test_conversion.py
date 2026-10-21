@@ -51,7 +51,7 @@ class ConversionTests(unittest.TestCase):
                     page.conversion_dialog.reject();self.assertTrue(page.conversion_dialog.isVisible())
                     page.conversion_line('BL62_CONVERSION '+json.dumps({'progress':50,'message':'Writing inference model…'}));self.assertEqual(page.conversion_dialog.progress.value(),50)
                     (Path(tmp)/'checkpoints').mkdir();page.local_path(str(page.inference_output)).write_bytes(b'fixture')
-                    page.conversion_finished(0,QProcess.NormalExit);self.assertFalse(page.converting);self.assertTrue(page.start.isEnabled());self.assertIsNone(page.conversion_dialog);info.assert_called_once();self.assertIn('Inference Model:',page.artifacts.text())
+                    page.conversion_finished(0,QProcess.NormalExit);self.assertFalse(page.converting);self.assertTrue(page.start.isEnabled());self.assertIsNone(page.conversion_dialog);info.assert_called_once();self.assertIn(str(page.local_path(str(page.inference_output))),info.call_args.args[2]);self.assertIn('Inference Model:',page.artifacts.text())
             finally:page.gpu_status.stop();page.close();page.deleteLater();app.processEvents()
     def test_real_worker_process_reports_progress_and_keeps_ui_responsive(self):
         from finetune_gui.training import TRAIN_PYTHON
