@@ -23,6 +23,6 @@ Name: desktopicon; Description: "Create a desktop shortcut"; Flags: checkedonce
 Source: "dist\BL62_Finetune_GUI\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
 Name: "{autoprograms}\BL62 Fine-tune GUI"; Filename: "{app}\BL62_Finetune_GUI.exe"
-Name: "{autodesktop}\BL62 Fine-tune GUI"; Filename: "{app}\BL62_Finetune_GUI.exe"; Tasks: desktopicon
+Name: "{autodesktop}\BL62 Fine-tune GUI"; Filename: "{app}\BL62_Finetune_GUI.exe"; Tasks: desktopicon; IconFilename: "{app}\_internal\assets\BL62_Finetune.ico"
 [Run]
 Filename: "{app}\BL62_Finetune_GUI.exe"; Description: "Launch BL62 Fine-tune GUI"; Flags: nowait postinstall skipifsilent

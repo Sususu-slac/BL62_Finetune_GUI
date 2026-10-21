@@ -328,4 +328,3 @@ class AnnotationView(QGraphicsView):
             self.clear_mask_selection()
         elif event.key() in (Qt.Key_Return,Qt.Key_Enter) and self.mode in {"brush","erase"}:self.finish_current_instance()
         else: super().keyPressEvent(event)
-
