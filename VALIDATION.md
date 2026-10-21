@@ -14,3 +14,7 @@ No datasets, user checkpoints or test-trained model files are included in the re
 ## v1.0.2 — duplicate label names
 
 22 tests passed on Windows and Linux. New coverage verifies case-insensitive duplicate-name confirmation, Cancel as the default, explicit Merge, cancellation preserving unsaved strokes and undo history, merging the current image and other images, and lossless export/reload after merging categories across train/validation splits. Individual instances and overlapping pixels remain separate.
+
+## v1.0.3 — output folder control
+
+22 tests passed on Windows and Linux. Training setup remains locked during a run while Open Output Folder stays enabled under the Output path. The output path controls retain their previous behavior.

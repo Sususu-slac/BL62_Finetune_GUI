@@ -61,7 +61,7 @@ class GuiTests(unittest.TestCase):
         with patch.object(t,'shell_start') as launch,patch.object(t,'save_prefs'):
             t.start_training();self.assertTrue(t.running);launch.assert_called_once()
         script=(out/'launch.sh').read_bytes();self.assertNotIn(b'\r',script);self.assertIn(b'setsid ',script);self.assertNotIn(b"'\\home",script)
-        self.assertFalse(t.setup.isEnabled());self.assertEqual(t.active_settings.gpus,1);t.running=False;t.active_settings=None;t.last_output=None
+        self.assertFalse(t.dataset.isEnabled());self.assertFalse(t.output.isEnabled());self.assertTrue(t.open_btn.isEnabled());self.assertEqual(t.active_settings.gpus,1);t.running=False;t.active_settings=None;t.last_output=None
     def test_polygon_merge_and_undo(self):
         self.d.view.polygon=[(2,2),(20,2),(20,20),(2,20)];self.d.view.finish_polygon();self.d.view.polygon=[(30,30),(40,30),(40,40)];self.d.view.finish_polygon();self.assertEqual(len(self.d.view.masks),2);self.d.select(0)
         with patch('finetune_gui.review.QInputDialog.getItem',return_value=('2: particle',True)):self.d.merge()

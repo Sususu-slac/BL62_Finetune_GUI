@@ -39,22 +39,26 @@ class TrainPage(QWidget):
         def spin(lo,hi,value):w=QSpinBox();w.setRange(lo,hi);w.setValue(value);return w
         self.epochs=spin(1,100000,200);self.batch=spin(1,128,1);self.workers=spin(0,64,4);self.val_every=spin(1,10000,10);self.save_every=spin(0,10000,0);self.save_every.setSpecialValueText('Final only');self.lr=QDoubleSpinBox();self.lr.setDecimals(6);self.lr.setRange(.000001,10);self.lr.setValue(.05)
         for title,w in [('Epochs',self.epochs),('Batch / GPU',self.batch),('Workers',self.workers),('Validate every',self.val_every),('Save every',self.save_every),('LR scale',self.lr)]:pl.addRow(title,w)
-        lv.addWidget(params);output=QGroupBox('Output');ol=QFormLayout(output);self.output,row=self.path_row('/home/subo/sam3/experiments/finetune_'+datetime.now().strftime('%Y%m%d_%H%M%S'),True);ol.addRow(row);lv.addWidget(output)
+        lv.addWidget(params);output=QGroupBox('Output');ol=QFormLayout(output);self.output,row=self.path_row('/home/subo/sam3/experiments/finetune_'+datetime.now().strftime('%Y%m%d_%H%M%S'),True);self.output_row=row;ol.addRow(row);self.open_btn=QPushButton('Open Output Folder');self.open_btn.clicked.connect(self.open_output);ol.addRow(self.open_btn);lv.addWidget(output)
         env=QGroupBox('Environment');env.setCheckable(True);env.setChecked(False);el=QVBoxLayout(env);self.env_fields=QWidget();ef=QFormLayout(self.env_fields)
         self.distro=QLineEdit(str(self.prefs.value('distro','Ubuntu-24.04')));ef.addRow('WSL distribution',self.distro)
         self.repository,row=self.path_row(str(self.prefs.value('repository',str(SAM3_ROOT))),True);ef.addRow('SAM3 repository',row)
         self.python,row=self.path_row(str(self.prefs.value('python',str(TRAIN_PYTHON))));ef.addRow('Python interpreter',row)
         self.config,row=self.path_row(str(self.prefs.value('config',str(DEFAULT_CONFIG))));ef.addRow('Config template',row)
-        self.env_button=QPushButton('Check Environment');self.env_button.clicked.connect(self.check_environment);ef.addRow(self.env_button);el.addWidget(self.env_fields);self.env_fields.setVisible(False);env.toggled.connect(self.env_fields.setVisible);lv.addWidget(env);lv.addStretch()
+        self.env_button=QPushButton('Check Environment');self.env_button.clicked.connect(self.check_environment);ef.addRow(self.env_button);el.addWidget(self.env_fields);self.env_fields.setVisible(False);env.toggled.connect(self.env_fields.setVisible);lv.addWidget(env);lv.addStretch();self._settings_groups=(dataset,ckpt,gpu,params,env)
         scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setWidget(self.setup);scroll.setMinimumWidth(360);left=QWidget();ll=QVBoxLayout(left);ll.addWidget(scroll)
         controls=QHBoxLayout();self.validate_btn=QPushButton('Validate');self.validate_btn.clicked.connect(self.validate_clicked);self.start=QPushButton('Start Training');self.start.setObjectName('primary');self.start.clicked.connect(self.start_training);self.stop=QPushButton('Safe Stop');self.stop.setEnabled(False);self.stop.clicked.connect(self.stop_training)
         for b in (self.validate_btn,self.start,self.stop):controls.addWidget(b)
         ll.addLayout(controls);split.addWidget(left)
         right=QWidget();rv=QVBoxLayout(right);self.state=QLabel('Ready');self.state.setObjectName('state');rv.addWidget(self.state);self.progress=QProgressBar();rv.addWidget(self.progress);self.epoch=QLabel('Epoch — / —');rv.addWidget(self.epoch)
         self.metric=QComboBox();self.metric.addItems(['Training Loss','Mask mIoU','Dice Loss','Validation AP','Validation AP50']);self.metric.currentIndexChanged.connect(self.refresh);rv.addWidget(self.metric);self.curve=Curve();rv.addWidget(self.curve,2);self.metrics=QLabel('No metrics yet');self.metrics.setWordWrap(True);rv.addWidget(self.metrics)
-        self.artifacts=QLabel('No checkpoint yet');self.artifacts.setWordWrap(True);rv.addWidget(self.artifacts);open_btn=QPushButton('Open Output Folder');open_btn.clicked.connect(self.open_output);rv.addWidget(open_btn);self.log=QPlainTextEdit();self.log.setReadOnly(True);self.log.setMaximumBlockCount(10000);rv.addWidget(self.log,2);split.addWidget(right);split.setSizes([430,1000])
+        self.artifacts=QLabel('No checkpoint yet');self.artifacts.setWordWrap(True);rv.addWidget(self.artifacts);self.log=QPlainTextEdit();self.log.setReadOnly(True);self.log.setMaximumBlockCount(10000);rv.addWidget(self.log,2);split.addWidget(right);split.setSizes([430,1000])
         self.timer=QTimer(self);self.timer.timeout.connect(self.refresh);self.timer.start(3000)
         self.stop_timer=QTimer(self);self.stop_timer.setInterval(500);self.stop_timer.timeout.connect(self.try_stop)
+
+    def set_setup_enabled(self,enabled):
+        for group in self._settings_groups:group.setEnabled(enabled)
+        self.output_row.setEnabled(enabled)
 
     def path_row(self,value,folder=False):
         edit=QLineEdit(str(value));row=QWidget();lay=QHBoxLayout(row);lay.setContentsMargins(0,0,0,0);lay.addWidget(edit,1);browse=QPushButton('Browse');browse.clicked.connect(lambda:self.browse(edit,folder));lay.addWidget(browse);return edit,row
@@ -149,14 +153,14 @@ class TrainPage(QWidget):
             wrapper=f"{self.env_script(s,True)} || exit $?\n[ -f {stop} ] && exit 130\ncd {shlex.quote(wsl_string(s.repository))} || exit 1\nexport CUDA_VISIBLE_DEVICES={gpu}\nsetsid {train} &\nchild=$!\nprintf '%s' \"$child\" > {pid}\nif [ -f {stop} ]; then kill -INT -- -\"$child\"; fi\nwait \"$child\"\nresult=$?\nrm -f {pid}\nexit \"$result\"\n"
             # A file avoids Windows/WSL quoting differences in nested bash commands.
             script=s.output/'launch.sh';self.local_path(str(script)).write_text(wrapper,encoding='utf-8',newline='\n')
-            self.running=True;self.stopping=False;self.last_output=s.output;self.setup.setEnabled(False);self.start.setEnabled(False);self.validate_btn.setEnabled(False);self.stop.setEnabled(True);self.state.setText('Starting');self.progress.setValue(0);self.curve.set_values([]);self.log.appendPlainText('Launching training. Environment and checkpoint are checked before GPU training.');self.shell_start(self.process,'bash '+shlex.quote(wsl_string(script)))
+            self.running=True;self.stopping=False;self.last_output=s.output;self.set_setup_enabled(False);self.start.setEnabled(False);self.validate_btn.setEnabled(False);self.stop.setEnabled(True);self.state.setText('Starting');self.progress.setValue(0);self.curve.set_values([]);self.log.appendPlainText('Launching training. Environment and checkpoint are checked before GPU training.');self.shell_start(self.process,'bash '+shlex.quote(wsl_string(script)))
         except Exception as e:QMessageBox.warning(self,'Cannot Start',str(e))
     def read_output(self):self.log.appendPlainText(bytes(self.process.readAllStandardOutput()).decode('utf-8','replace').rstrip())
     def process_error(self):
         self.log.appendPlainText(self.process.errorString())
         if self.process.state()==QProcess.NotRunning:self.finished(-1,None)
     def finished(self,code,status):
-        self.running=False;self.stop_timer.stop();self.setup.setEnabled(True);self.start.setEnabled(True);self.validate_btn.setEnabled(True);self.stop.setEnabled(False);self.stop.setText('Safe Stop');self.state.setText('Stopped' if self.stopping else 'Completed' if code==0 else f'Failed ({code})');self.refresh()
+        self.running=False;self.stop_timer.stop();self.set_setup_enabled(True);self.start.setEnabled(True);self.validate_btn.setEnabled(True);self.stop.setEnabled(False);self.stop.setText('Safe Stop');self.state.setText('Stopped' if self.stopping else 'Completed' if code==0 else f'Failed ({code})');self.refresh()
         if self.last_output:self.output.setText(str(self.last_output)+'_'+datetime.now().strftime('%H%M%S'))
     def stop_training(self):
         if not self.running:return
