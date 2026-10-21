@@ -23,7 +23,7 @@ class ReviewPage(QWidget):
         root=QHBoxLayout(self);root.setContentsMargins(0,0,0,0);split=QSplitter();root.addWidget(split)
         left=QWidget();left.setMinimumWidth(310);shell=QVBoxLayout(left);settings=QWidget();lv=QVBoxLayout(settings);scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setWidget(settings);shell.addWidget(scroll,1)
         source=QGroupBox('Dataset');sl=QVBoxLayout(source);row=QHBoxLayout()
-        for title,fn in [('Open Folder',self.open_folder),('Open COCO',self.open_json)]: b=QPushButton(title);b.clicked.connect(fn);row.addWidget(b)
+        for title,fn in [('Open Folder',self.open_folder),('Open JSON File',self.open_json)]: b=QPushButton(title);b.clicked.connect(fn);row.addWidget(b)
         sl.addLayout(row);self.source_label=QLabel('No dataset');self.source_label.setWordWrap(True);sl.addWidget(self.source_label)
         self.filter=QComboBox();self.filter.addItems(['All Images','Training','Validation','Unassigned']);self.filter.currentIndexChanged.connect(self.populate);sl.addWidget(self.filter)
         self.counts=QLabel();self.counts.setWordWrap(True);sl.addWidget(self.counts);self.files=QListWidget();self.files.currentItemChanged.connect(self.choose_item);sl.addWidget(self.files,1);lv.addWidget(source,1)
@@ -61,7 +61,7 @@ class ReviewPage(QWidget):
         p=QFileDialog.getExistingDirectory(self,'Open Dataset Folder')
         if p:self.load(p)
     def open_json(self):
-        p,_=QFileDialog.getOpenFileName(self,'Open COCO Annotations','','COCO JSON (*.json)')
+        p,_=QFileDialog.getOpenFileName(self,'Open JSON File','','JSON files (*.json)')
         if p:self.load(p)
     def load(self,path):
         if not self.discard_ok(): return

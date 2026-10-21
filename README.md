@@ -4,7 +4,7 @@ Independent Windows desktop application for preparing COCO datasets and managing
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.0.0.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.0.1.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. Configure the existing installation under **Training → Environment**, then click **Check Environment**.
 
