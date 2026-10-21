@@ -26,3 +26,5 @@ New-run logging checks confirm that a valid launch clears prior on-screen output
 29 tests passed on Windows and Linux. Added coverage checks multi-GPU/quoted CSV parsing, unavailable metrics, stale-data removal, selection display, non-overlapping background queries, an active Qt heartbeat during slow queries, timeout recovery and clean shutdown.
 
 A native Windows integration check sampled both RTX 6000 Ada devices three times with the production 2,000 ms timer. Observed sample intervals were 1.91 and 2.14 seconds; the Qt heartbeat ticked 200 times. Training Log content stayed unchanged. Switching to Data paused polling and returning to Training resumed it. Device names, utilization and used/total VRAM rendered correctly in the native Windows window. No model was loaded.
+
+The metric selector no longer shadows QWidget's native `metric()` method. Regression checks verify the native method remains callable and DPI metrics remain valid.

@@ -21,6 +21,7 @@ class GuiTests(unittest.TestCase):
     def brush(self,start,end):
         self.d.view.set_mode('brush');a=self.d.view.mapFromScene(*start);b=self.d.view.mapFromScene(*end);QTest.mousePress(self.d.view.viewport(),Qt.LeftButton,Qt.NoModifier,a);QTest.mouseMove(self.d.view.viewport(),b,50);QTest.mouseRelease(self.d.view.viewport(),Qt.LeftButton,Qt.NoModifier,b);app.processEvents()
     def test_shared_runtime_header_and_removed_environment_section(self):
+        self.assertTrue(callable(self.w.training.metric));self.assertGreater(self.w.training.logicalDpiX(),0)
         for page in (0,1):
             self.w.tabs.setCurrentIndex(page);app.processEvents();self.assertTrue(self.w.runtime_info.isVisible());self.assertIn('sam3_finetune_wsl',self.w.runtime_info.text());self.assertIn('/home/subo/sam3',self.w.runtime_info.text())
         self.w.training.repository.setText('/tmp/selected_sam3');self.assertIn('/tmp/selected_sam3',self.w.runtime_info.text())

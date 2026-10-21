@@ -54,7 +54,7 @@ class TrainPage(QWidget):
         ll.addLayout(controls);split.addWidget(left)
         right=QWidget();rv=QVBoxLayout(right);self.state=QLabel('Ready');self.state.setObjectName('state');rv.addWidget(self.state);self.progress=QProgressBar();rv.addWidget(self.progress);self.epoch=QLabel('Epoch — / —');rv.addWidget(self.epoch)
         self.gpu_status=GpuStatusPanel(self);self.gpu_status.set_selected_ids(self.gpu_ids.text());self.gpu_ids.textChanged.connect(self.gpu_status.set_selected_ids);rv.addWidget(self.gpu_status)
-        self.metric=QComboBox();self.metric.addItems(['Training Loss','Mask mIoU','Dice Loss','Validation AP','Validation AP50']);self.metric.currentIndexChanged.connect(self.refresh);rv.addWidget(self.metric);self.curve=Curve();rv.addWidget(self.curve,2);self.metrics=QLabel('No metrics yet');self.metrics.setWordWrap(True);rv.addWidget(self.metrics)
+        self.metric_selector=QComboBox();self.metric_selector.addItems(['Training Loss','Mask mIoU','Dice Loss','Validation AP','Validation AP50']);self.metric_selector.currentIndexChanged.connect(self.refresh);rv.addWidget(self.metric_selector);self.curve=Curve();rv.addWidget(self.curve,2);self.metrics=QLabel('No metrics yet');self.metrics.setWordWrap(True);rv.addWidget(self.metrics)
         self.artifacts=QLabel('No checkpoint yet');self.artifacts.setWordWrap(True);rv.addWidget(self.artifacts);self.log=QPlainTextEdit();self.log.setReadOnly(True);self.log.setMaximumBlockCount(10000);rv.addWidget(self.log,2);split.addWidget(right);split.setSizes([430,1000])
         self.timer=QTimer(self);self.timer.timeout.connect(self.refresh);self.timer.start(3000)
         self.stop_timer=QTimer(self);self.stop_timer.setInterval(500);self.stop_timer.timeout.connect(self.try_stop)
@@ -195,7 +195,7 @@ class TrainPage(QWidget):
         if not self.active_settings:return
         s=self.active_settings;out=self.local_path(str(s.output));rows=load_stats(out/'logs'/s.category/'train_stats.json');vals=load_stats(out/'logs'/s.category/'val_stats.json')
         mapping=[('Losses/train_all_loss',rows),('Losses/train_all_miou_semantic_seg',rows),('Losses/train_all_loss_semantic_dice',rows),('Meters_train/val_roboflow100/detection/coco_eval_bbox_AP',vals),('Meters_train/val_roboflow100/detection/coco_eval_bbox_AP_50',vals)]
-        key,data=mapping[self.metric.currentIndex()];self.curve.set_values([r.get(key) for r in data])
+        key,data=mapping[self.metric_selector.currentIndex()];self.curve.set_values([r.get(key) for r in data])
         if rows:
             row=rows[-1];epoch=int(row.get('Trainer/epoch',0))+1;self.epoch.setText(f'Epoch {epoch} / {s.epochs}');self.progress.setValue(min(100,round(100*epoch/s.epochs)));self.metrics.setText('  ·  '.join(f"{label} {row.get(k,0):.4g}" for label,k in [('Loss','Losses/train_all_loss'),('mIoU','Losses/train_all_miou_semantic_seg'),('Dice loss','Losses/train_all_loss_semantic_dice')]))
         ckpt=out/'checkpoints/checkpoint.pt';self.artifacts.setText('Checkpoint: '+str(ckpt) if ckpt.exists() else 'No checkpoint yet')
