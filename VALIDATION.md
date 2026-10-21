@@ -28,3 +28,5 @@ New-run logging checks confirm that a valid launch clears prior on-screen output
 A native Windows integration check sampled both RTX 6000 Ada devices three times with the production 2,000 ms timer. Observed sample intervals were 1.91 and 2.14 seconds; the Qt heartbeat ticked 200 times. Training Log content stayed unchanged. Switching to Data paused polling and returning to Training resumed it. Device names, utilization and used/total VRAM rendered correctly in the native Windows window. No model was loaded.
 
 The metric selector no longer shadows QWidget's native `metric()` method. Regression checks verify the native method remains callable and DPI metrics remain valid.
+
+The frozen Windows EXE was also launched normally and checked through Windows UI Automation: switching to Training displayed both GPU 0 and GPU 1 rows populated from the real driver query.
