@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from PySide6.QtCore import Qt,QProcess,QTimer,QSettings
 from PySide6.QtGui import QColor,QPainter,QPen
-from PySide6.QtWidgets import (QWidget,QHBoxLayout,QVBoxLayout,QFormLayout,QGroupBox,QSplitter,QPushButton,QLabel,QComboBox,QLineEdit,QSpinBox,QDoubleSpinBox,QPlainTextEdit,QProgressBar,QFileDialog,QMessageBox,QScrollArea)
+from PySide6.QtWidgets import (QWidget,QHBoxLayout,QVBoxLayout,QFormLayout,QGroupBox,QSplitter,QPushButton,QLabel,QComboBox,QLineEdit,QSpinBox,QDoubleSpinBox,QPlainTextEdit,QProgressBar,QFileDialog,QMessageBox,QScrollArea,QCheckBox)
 from .gpu_monitor import GpuStatusPanel
 from .training import TrainingSettings,DEFAULT_CONFIG,SAM3_ROOT,TRAIN_PYTHON,host_path,wsl_string,dataset_summary,render_config,command,config_name_for,load_stats
 
@@ -35,7 +35,7 @@ class TrainPage(QWidget):
         root=QHBoxLayout(self);root.setContentsMargins(0,0,0,0);split=QSplitter();root.addWidget(split);self.setup=QWidget();lv=QVBoxLayout(self.setup)
         dataset=QGroupBox('Dataset');dl=QFormLayout(dataset);self.dataset,row=self.path_row('',True);self.dataset.setPlaceholderText('Save from Data or select a dataset');dl.addRow(row);self.dataset_info=QLabel('No dataset selected');self.dataset_info.setWordWrap(True);dl.addRow(self.dataset_info);self.dataset.editingFinished.connect(self.inspect_dataset);lv.addWidget(dataset)
         ckpt=QGroupBox('Checkpoint');cl=QFormLayout(ckpt);self.mode=QComboBox();self.mode.addItems(['Fine-tune','Resume Training']);cl.addRow('Mode',self.mode);self.checkpoint,row=self.path_row('/home/subo/sam3/sam3_1.pt');cl.addRow(row);lv.addWidget(ckpt)
-        gpu=QGroupBox('GPU');gl=QFormLayout(gpu);self.gpu_ids=QLineEdit('0,1');gl.addRow('Device IDs',self.gpu_ids);lv.addWidget(gpu)
+        gpu=QGroupBox('GPU');self.gpu_layout=QVBoxLayout(gpu);self.gpu_ids=QLineEdit('0,1',gpu);self.gpu_ids.hide();self.gpu_choices={};self.update_gpu_choices([]);self.gpu_ids.textChanged.connect(self.sync_gpu_choices);lv.addWidget(gpu)
         params=QGroupBox('Parameters');pl=QFormLayout(params)
         def spin(lo,hi,value):w=QSpinBox();w.setRange(lo,hi);w.setValue(value);return w
         self.epochs=spin(1,100000,200);self.batch=spin(1,128,1);self.workers=spin(0,64,4);self.val_every=spin(1,10000,10);self.save_every=spin(0,10000,0);self.save_every.setSpecialValueText('Final only');self.lr=QDoubleSpinBox();self.lr.setDecimals(6);self.lr.setRange(.000001,10);self.lr.setValue(.05)
@@ -53,11 +53,29 @@ class TrainPage(QWidget):
         for b in (self.validate_btn,self.start,self.stop):controls.addWidget(b)
         ll.addLayout(controls);split.addWidget(left)
         right=QWidget();rv=QVBoxLayout(right);self.state=QLabel('Ready');self.state.setObjectName('state');rv.addWidget(self.state);self.progress=QProgressBar();rv.addWidget(self.progress);self.epoch=QLabel('Epoch — / —');rv.addWidget(self.epoch)
-        self.gpu_status=GpuStatusPanel(self);self.gpu_status.set_selected_ids(self.gpu_ids.text());self.gpu_ids.textChanged.connect(self.gpu_status.set_selected_ids);rv.addWidget(self.gpu_status)
+        self.gpu_status=GpuStatusPanel(self);self.gpu_status.set_selected_ids(self.gpu_ids.text());self.gpu_ids.textChanged.connect(self.gpu_status.set_selected_ids);rv.addWidget(self.gpu_status);self.gpu_status.monitor.updated.connect(self.update_gpu_choices)
         self.metric_selector=QComboBox();self.metric_selector.addItems(['Training Loss','Mask mIoU','Dice Loss','Validation AP','Validation AP50']);self.metric_selector.currentIndexChanged.connect(self.refresh);rv.addWidget(self.metric_selector);self.curve=Curve();rv.addWidget(self.curve,2);self.metrics=QLabel('No metrics yet');self.metrics.setWordWrap(True);rv.addWidget(self.metrics)
         self.artifacts=QLabel('No checkpoint yet');self.artifacts.setWordWrap(True);rv.addWidget(self.artifacts);self.log=QPlainTextEdit();self.log.setReadOnly(True);self.log.setMaximumBlockCount(10000);rv.addWidget(self.log,2);split.addWidget(right);split.setSizes([430,1000])
         self.timer=QTimer(self);self.timer.timeout.connect(self.refresh);self.timer.start(3000)
         self.stop_timer=QTimer(self);self.stop_timer.setInterval(500);self.stop_timer.timeout.connect(self.try_stop)
+
+    def update_gpu_choices(self,readings):
+        names={r.index:r.name for r in readings}
+        ids=set(names)|{int(x) for x in self.gpu_ids.text().split(',') if x.strip().isdigit()}
+        for index in sorted(ids):
+            if index not in self.gpu_choices:
+                box=QCheckBox();self.gpu_choices[index]=box;self.gpu_layout.addWidget(box)
+                box.toggled.connect(self.gpu_selection_changed)
+            self.gpu_choices[index].setText(f'GPU {index} · {names[index]}' if index in names else f'GPU {index}')
+        self.sync_gpu_choices()
+
+    def sync_gpu_choices(self):
+        selected={int(x) for x in self.gpu_ids.text().split(',') if x.strip().isdigit()}
+        for index,box in self.gpu_choices.items():
+            box.blockSignals(True);box.setChecked(index in selected);box.blockSignals(False)
+
+    def gpu_selection_changed(self):
+        self.gpu_ids.setText(','.join(str(i) for i,box in sorted(self.gpu_choices.items()) if box.isChecked()))
 
     def set_setup_enabled(self,enabled):
         for group in self._settings_groups:group.setEnabled(enabled)
@@ -82,6 +100,7 @@ class TrainPage(QWidget):
             summary=dataset_summary(self.local_path(self.dataset.text()));self.dataset_info.setText(f"Train {summary['train']['images']} · Validate {summary['val']['images']}\n"+' / '.join(summary['train']['categories']))
         except Exception as e:self.dataset_info.setText(str(e))
     def settings(self):
+        if not self.gpu_ids.text().strip():raise ValueError('Select at least one GPU')
         ids=[x.strip() for x in self.gpu_ids.text().split(',')]
         if not ids or any(not x.isdigit() for x in ids) or len(set(ids))!=len(ids):raise ValueError('GPU IDs must be unique integers separated by commas')
         dataset=Path(wsl_string(Path(self.dataset.text().strip())))

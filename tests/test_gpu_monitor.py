@@ -16,8 +16,25 @@ class GpuTests(unittest.TestCase):
         for text in ('','NVIDIA-SMI has failed','0, GPU, 140, 0, 100','0, GPU, nan, 0, 100','0, GPU, 0, 1, 100\n0, GPU, 0, 1, 100'):
             with self.subTest(text=text):self.assertRaises(ValueError,parse_gpu_csv,text)
     def test_panel_selection_memory_and_failure_clear_stale_data(self):
-        panel=GpuStatusPanel(auto_start=False);panel.set_selected_ids('1');panel.apply_readings(parse_gpu_csv(CSV));self.assertNotIn('Selected',panel.cards[0]['name'].text());self.assertIn('Selected',panel.cards[1]['name'].text());self.assertEqual(panel.cards[0]['utilization'].format(),'42%');self.assertEqual(panel.cards[1]['utilization'].format(),'N/A');self.assertIn('4.0 / 48.0 GiB',panel.cards[0]['memory'].format())
-        panel.show_unavailable('Query failed');self.assertFalse(panel.readings);self.assertFalse(panel.cards);self.assertEqual(panel.status.text(),'GPU status unavailable');panel.apply_readings([GpuReading(0,'GPU',0,None,None)]);self.assertEqual(panel.cards[0]['memory'].format(),'N/A');panel.stop();panel.deleteLater();app.processEvents()
+        panel=GpuStatusPanel(auto_start=False);panel.set_selected_ids('1');panel.apply_readings(parse_gpu_csv(CSV))
+        self.assertEqual(set(panel.cards),{1});self.assertEqual(panel.cards[1]['utilization'].format(),'N/A')
+        panel.set_selected_ids('0');self.assertEqual(set(panel.cards),{0});self.assertEqual(panel.cards[0]['utilization'].format(),'42%');self.assertIn('4.0 / 48.0 GiB',panel.cards[0]['memory'].format())
+        panel.apply_readings(parse_gpu_csv(CSV));self.assertEqual(set(panel.cards),{0})
+        panel.set_selected_ids('');self.assertFalse(panel.cards);self.assertEqual(panel.status.text(),'Select a GPU')
+        panel.set_selected_ids('0');panel.show_unavailable('Query failed');self.assertFalse(panel.readings);self.assertFalse(panel.cards);self.assertEqual(panel.status.text(),'GPU status unavailable')
+        panel.apply_readings([GpuReading(0,'GPU',0,None,None)]);self.assertEqual(panel.cards[0]['memory'].format(),'N/A');panel.stop();panel.deleteLater();app.processEvents()
+    def test_left_selection_drives_training_and_survives_refresh(self):
+        from finetune_gui.train_page import TrainPage
+        page=TrainPage()
+        try:
+            page.gpu_status.apply_readings(parse_gpu_csv(CSV));page.update_gpu_choices(parse_gpu_csv(CSV))
+            page.gpu_choices[0].setChecked(False);self.assertEqual(page.gpu_ids.text(),'1');self.assertEqual(set(page.gpu_status.cards),{1})
+            page.dataset.setText('/dataset');page.checkpoint.setText('/checkpoint');self.assertEqual(page.settings().gpus,1)
+            page.update_gpu_choices(parse_gpu_csv(CSV));self.assertFalse(page.gpu_choices[0].isChecked());self.assertTrue(page.gpu_choices[1].isChecked())
+            page.set_setup_enabled(False);self.assertFalse(page.gpu_choices[1].isEnabled());page.set_setup_enabled(True)
+            page.gpu_choices[1].setChecked(False)
+            with self.assertRaisesRegex(ValueError,'Select at least one GPU'):page.settings()
+        finally:page.gpu_status.stop();page.close();page.deleteLater();app.processEvents()
     def test_background_queries_do_not_overlap_or_block_event_loop(self):
         command=[sys.executable,'-c',"import time;time.sleep(.15);print("+repr(CSV)+")"]
         monitor=GpuMonitor(command_factory=lambda:command,interval_ms=50,timeout_ms=3000);samples=[];ticks=[]

@@ -39,8 +39,7 @@ class MainWindow(QMainWindow):
         python=wsl_string(Path(self.training.python.text()))
         repository=wsl_string(Path(self.training.repository.text()))
         environment=python.split('/envs/',1)[1].split('/')[0] if '/envs/' in python else 'Python'
-        gui='Windows app' if getattr(sys,'frozen',False) and sys.platform=='win32' else Path(sys.prefix).name
-        self.runtime_info.setText(f'GUI: {gui}  ·  Training: {environment}  ·  WSL: {self.training.distro.text()}\nPython: {python}\nSAM3: {repository}')
+        self.runtime_info.setText(f'Environment: {environment}\nRepo: {repository}')
         self.runtime_info.setToolTip(self.runtime_info.text())
     def show_status(self,text):
         self.statusBar().showMessage(text,8000)

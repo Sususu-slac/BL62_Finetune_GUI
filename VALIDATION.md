@@ -30,3 +30,7 @@ A native Windows integration check sampled both RTX 6000 Ada devices three times
 The metric selector no longer shadows QWidget's native `metric()` method. Regression checks verify the native method remains callable and DPI metrics remain valid.
 
 The frozen Windows EXE was also launched normally and checked through Windows UI Automation: switching to Training displayed both GPU 0 and GPU 1 rows populated from the real driver query.
+
+## v1.0.5 — GPU selection and concise runtime header
+
+30 tests passed on Windows and Linux. New checks verify that left GPU checkboxes drive the actual training device count, refreshes preserve selection, training locks selection, and no selection blocks launch. The right panel immediately filters cached telemetry to selected devices and keeps the filter after new samples. Both tabs share the two-line Environment/Repo header. No new model training was needed for these UI changes.

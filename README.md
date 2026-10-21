@@ -4,7 +4,7 @@ Independent Windows desktop application for preparing COCO datasets and managing
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.0.4.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.0.5.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. The current GUI runtime, WSL training environment, Python interpreter and SAM3 repository are displayed at the upper right on both Data and Training. The previously saved environment configuration is retained; training checks it automatically before launch.
 
@@ -53,3 +53,5 @@ QT_QPA_PLATFORM=offscreen python -m unittest discover -s tests -v
 For a Windows EXE, install PyInstaller in the GUI Python environment and run `build_windows.ps1`. Inno Setup 6 builds the optional installer via `installer.iss`. The training environment remains separate from the GUI Python environment.
 
 The icon was generated with the built-in imagegen tool using the user's BL62 Label icon as a style reference; the prompt is in `assets/icon_prompt.txt`.
+
+GPU selection uses checkboxes in the left panel. The right panel displays live utilization and VRAM for selected GPUs only. Training requires at least one selection; GPU choices stay locked during a run. Both pages show the training Environment and Repo in the shared header.

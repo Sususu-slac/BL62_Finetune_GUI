@@ -93,7 +93,7 @@ class GpuMonitor(QObject):
 
 class GpuStatusPanel(QGroupBox):
     def __init__(self,parent=None,auto_start=True):
-        super().__init__('GPU Status',parent);self.auto_start=auto_start;self.readings=[];self.cards={};self.selected=set()
+        super().__init__('GPU Status',parent);self.auto_start=auto_start;self.readings=[];self.cards={};self.selected=set();self.identities=[]
         self.setToolTip('Device-wide readings from nvidia-smi. Refreshes every 2 seconds while Training is visible.')
         self.grid=QGridLayout(self);self.grid.setHorizontalSpacing(12)
         for column,title in enumerate(('GPU','Utilization','VRAM (Used / Total)')):self.grid.addWidget(QLabel(title),0,column)
@@ -101,25 +101,26 @@ class GpuStatusPanel(QGroupBox):
         self.status=QLabel('Detecting GPUs…');self.status.setWordWrap(True);self.grid.addWidget(self.status,1,0,1,3)
         self.monitor=GpuMonitor(self);self.monitor.updated.connect(self.apply_readings);self.monitor.unavailable.connect(self.show_unavailable)
     def set_selected_ids(self,value):
-        self.selected={int(x.strip()) for x in value.split(',') if x.strip().isdigit()};self._names()
-    def _names(self):
-        for reading in self.readings:
-            label=self.cards[reading.index]['name'];selected=reading.index in self.selected
-            label.setText(f"GPU {reading.index} · {reading.name}"+(' · Selected' if selected else ''))
-            label.setStyleSheet('color:#72e4c4' if selected else '')
+        self.selected={int(x.strip()) for x in value.split(',') if x.strip().isdigit()};self._render()
     def _clear_cards(self):
         for card in self.cards.values():
             for widget in card.values():self.grid.removeWidget(widget);widget.deleteLater()
-        self.cards={}
+        self.cards={};self.identities=[]
     def apply_readings(self,readings):
+        self.readings=list(readings);self._render()
+    def _render(self):
+        readings=[r for r in self.readings if r.index in self.selected]
         identities=[(r.index,r.name) for r in readings]
-        if identities!=[(r.index,r.name) for r in self.readings]:
-            self._clear_cards()
+        if identities!=self.identities:
+            self._clear_cards();self.identities=identities
             for row,r in enumerate(readings,1):
-                name=QLabel();name.setWordWrap(True);util=QProgressBar();util.setRange(0,100);util.setMinimumWidth(100);memory=QProgressBar();memory.setRange(0,100);memory.setMinimumWidth(180)
+                name=QLabel(f'GPU {r.index} · {r.name}');name.setWordWrap(True);util=QProgressBar();util.setRange(0,100);util.setMinimumWidth(100);memory=QProgressBar();memory.setRange(0,100);memory.setMinimumWidth(180)
                 self.cards[r.index]={'name':name,'utilization':util,'memory':memory}
                 for column,widget in enumerate((name,util,memory)):self.grid.addWidget(widget,row,column)
-        self.readings=list(readings);self.status.hide()
+        missing=self.selected-{r.index for r in readings}
+        self.status.setText('Select a GPU' if not self.selected else ('Waiting for GPU '+', '.join(map(str,sorted(missing)))) if missing else '')
+        self.status.setVisible(not self.selected or bool(missing))
+        self.grid.addWidget(self.status,len(readings)+1,0,1,3)
         for r in readings:
             card=self.cards[r.index];util=card['utilization'];util.setValue(round(r.utilization) if r.utilization is not None else 0);util.setFormat(f'{r.utilization:.0f}%' if r.utilization is not None else 'N/A')
             memory=card['memory']
@@ -127,7 +128,6 @@ class GpuStatusPanel(QGroupBox):
                 memory.setValue(0);memory.setFormat('N/A')
             else:
                 memory.setValue(min(100,round(100*r.memory_used/r.memory_total)));memory.setFormat(f'{r.memory_used/1024:.1f} / {r.memory_total/1024:.1f} GiB')
-        self._names()
     def show_unavailable(self,message):
         self._clear_cards();self.readings=[];self.status.setText('GPU status unavailable');self.status.setToolTip(message);self.status.show()
     def showEvent(self,event):

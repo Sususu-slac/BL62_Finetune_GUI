@@ -1,7 +1,7 @@
 [Setup]
 AppId={{919EC782-604B-4EE9-8170-81DB30AA8E3E}
 AppName=BL62 Fine-tune GUI
-AppVersion=1.0.4
+AppVersion=1.0.5
 AppPublisher=BL62
 AppPublisherURL=https://github.com/Sususu-slac/BL62_Finetune_GUI
 DefaultDirName={localappdata}\Programs\BL62_Finetune_GUI
@@ -10,7 +10,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=release
-OutputBaseFilename=BL62_Finetune_GUI_Setup_1.0.4
+OutputBaseFilename=BL62_Finetune_GUI_Setup_1.0.5
 SetupIconFile=assets\BL62_Finetune.ico
 UninstallDisplayIcon={app}\BL62_Finetune_GUI.exe
 Compression=lzma2

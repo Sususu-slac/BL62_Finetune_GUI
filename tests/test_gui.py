@@ -23,7 +23,7 @@ class GuiTests(unittest.TestCase):
     def test_shared_runtime_header_and_removed_environment_section(self):
         self.assertTrue(callable(self.w.training.metric));self.assertGreater(self.w.training.logicalDpiX(),0)
         for page in (0,1):
-            self.w.tabs.setCurrentIndex(page);app.processEvents();self.assertTrue(self.w.runtime_info.isVisible());self.assertIn('sam3_finetune_wsl',self.w.runtime_info.text());self.assertIn('/home/subo/sam3',self.w.runtime_info.text())
+            self.w.tabs.setCurrentIndex(page);app.processEvents();self.assertTrue(self.w.runtime_info.isVisible());self.assertEqual(self.w.runtime_info.text().splitlines()[0],'Environment: sam3_finetune_wsl');self.assertEqual(len(self.w.runtime_info.text().splitlines()),2);self.assertIn('/home/subo/sam3',self.w.runtime_info.text())
         self.w.training.repository.setText('/tmp/selected_sam3');self.assertIn('/tmp/selected_sam3',self.w.runtime_info.text())
         self.assertFalse(any(g.title()=='Environment' for g in self.w.training.findChildren(QGroupBox)))
     def test_brush_erase_undo_switch_and_export(self):
