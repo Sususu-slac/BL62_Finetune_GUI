@@ -4,7 +4,7 @@ Independent Windows desktop application for preparing COCO datasets and managing
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.0.3.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.0.4.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. The current GUI runtime, WSL training environment, Python interpreter and SAM3 repository are displayed at the upper right on both Data and Training. The previously saved environment configuration is retained; training checks it automatically before launch.
 
@@ -29,7 +29,7 @@ One checkpoint picker serves both modes:
 - **Fine-tune** loads model weights and starts a new experiment.
 - **Resume Training** restores a full training checkpoint including optimizer and epoch. Select a compatible full SAM3 training checkpoint, typically `checkpoints/checkpoint.pt`. For experiments created by this GUI, `gui_launch.json` restores the initial checkpoint and checks the original dataset/GPU selection. Epochs is the total target epoch count and must exceed the saved epoch.
 
-GPU Device IDs are physical CUDA indices, for example `0`, `1` or `0,1`. Batch size is per GPU. Output must be a new or empty experiment directory. The application creates a separate runtime YAML and never modifies the selected template. Training settings are locked during a run. Safe Stop targets only the recorded training process group, including its distributed workers. Closing during training requests a safe stop and waits for exit.
+GPU Device IDs are physical CUDA indices, for example `0`, `1` or `0,1`. The GPU Status panel below training progress shows every NVIDIA GPU, utilization and VRAM used/total in GiB, highlighting the selected devices. It refreshes in the background every two seconds while Training is visible and pauses on Data. Readings are device-wide and include other programs. Unavailable metrics display N/A; failed queries clear stale readings and show an unavailable status. Monitoring uses nvidia-smi without loading a model and does not write into the training log. Batch size is per GPU. Output must be a new or empty experiment directory. The application creates a separate runtime YAML and never modifies the selected template. Training settings are locked during a run. Safe Stop targets only the recorded training process group, including its distributed workers. Closing during training requests a safe stop and waits for exit.
 
 Environment defaults on the original workstation:
 

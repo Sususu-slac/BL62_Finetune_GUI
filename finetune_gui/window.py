@@ -58,7 +58,7 @@ class MainWindow(QMainWindow):
             event.ignore();return
         if not self.data.discard_ok():self._close_after_stop=False;event.ignore();return
         if self.training.env_process.state()!=QProcess.NotRunning:self.training.env_process.kill();self.training.env_process.waitForFinished(3000)
-        self.training.save_prefs();event.accept()
+        self.training.gpu_status.stop();self.training.save_prefs();event.accept()
 
 def run():
     app=QApplication.instance() or QApplication(sys.argv);app.setApplicationName('BL62 Fine-tune Studio');window=MainWindow();window.show();return app.exec()

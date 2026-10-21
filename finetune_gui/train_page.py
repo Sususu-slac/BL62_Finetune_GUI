@@ -11,6 +11,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt,QProcess,QTimer,QSettings
 from PySide6.QtGui import QColor,QPainter,QPen
 from PySide6.QtWidgets import (QWidget,QHBoxLayout,QVBoxLayout,QFormLayout,QGroupBox,QSplitter,QPushButton,QLabel,QComboBox,QLineEdit,QSpinBox,QDoubleSpinBox,QPlainTextEdit,QProgressBar,QFileDialog,QMessageBox,QScrollArea)
+from .gpu_monitor import GpuStatusPanel
 from .training import TrainingSettings,DEFAULT_CONFIG,SAM3_ROOT,TRAIN_PYTHON,host_path,wsl_string,dataset_summary,render_config,command,config_name_for,load_stats
 
 class Curve(QWidget):
@@ -52,6 +53,7 @@ class TrainPage(QWidget):
         for b in (self.validate_btn,self.start,self.stop):controls.addWidget(b)
         ll.addLayout(controls);split.addWidget(left)
         right=QWidget();rv=QVBoxLayout(right);self.state=QLabel('Ready');self.state.setObjectName('state');rv.addWidget(self.state);self.progress=QProgressBar();rv.addWidget(self.progress);self.epoch=QLabel('Epoch — / —');rv.addWidget(self.epoch)
+        self.gpu_status=GpuStatusPanel(self);self.gpu_status.set_selected_ids(self.gpu_ids.text());self.gpu_ids.textChanged.connect(self.gpu_status.set_selected_ids);rv.addWidget(self.gpu_status)
         self.metric=QComboBox();self.metric.addItems(['Training Loss','Mask mIoU','Dice Loss','Validation AP','Validation AP50']);self.metric.currentIndexChanged.connect(self.refresh);rv.addWidget(self.metric);self.curve=Curve();rv.addWidget(self.curve,2);self.metrics=QLabel('No metrics yet');self.metrics.setWordWrap(True);rv.addWidget(self.metrics)
         self.artifacts=QLabel('No checkpoint yet');self.artifacts.setWordWrap(True);rv.addWidget(self.artifacts);self.log=QPlainTextEdit();self.log.setReadOnly(True);self.log.setMaximumBlockCount(10000);rv.addWidget(self.log,2);split.addWidget(right);split.setSizes([430,1000])
         self.timer=QTimer(self);self.timer.timeout.connect(self.refresh);self.timer.start(3000)

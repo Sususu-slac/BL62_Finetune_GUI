@@ -20,3 +20,9 @@ No datasets, user checkpoints or test-trained model files are included in the re
 24 tests passed on Windows and Linux. Training setup remains locked during a run while Open Output Folder stays enabled under the Output path. The output path controls retain their previous behavior. The shared runtime header remains visible on both tabs, follows the retained training configuration, and replaces the removed Environment settings section.
 
 New-run logging checks confirm that a valid launch clears prior on-screen output, while failed configuration validation preserves the previous log. Vertical scrollbar styling was checked visually.
+
+## v1.0.4 — live GPU telemetry
+
+29 tests passed on Windows and Linux. Added coverage checks multi-GPU/quoted CSV parsing, unavailable metrics, stale-data removal, selection display, non-overlapping background queries, an active Qt heartbeat during slow queries, timeout recovery and clean shutdown.
+
+A native Windows integration check sampled both RTX 6000 Ada devices three times with the production 2,000 ms timer. Observed sample intervals were 1.91 and 2.14 seconds; the Qt heartbeat ticked 200 times. Training Log content stayed unchanged. Switching to Data paused polling and returning to Training resumed it. Device names, utilization and used/total VRAM rendered correctly in the native Windows window. No model was loaded.
