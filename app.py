@@ -10,10 +10,11 @@ def report_error(kind,value,tb):
 
 if __name__=='__main__':
     sys.excepthook=report_error
-    if len(sys.argv)>2 and sys.argv[1]=='--self-test':
+    if len(sys.argv)>2 and sys.argv[1] in ('--self-test','--self-test-conversion'):
         from PySide6.QtWidgets import QApplication
         from finetune_gui.window import MainWindow
-        from finetune_gui.selftest import run as selftest
+        from finetune_gui.selftest import run,run_conversion
+        selftest=run_conversion if sys.argv[1]=='--self-test-conversion' else run
         app=QApplication([]);window=MainWindow()
         try:selftest(window,sys.argv[2]);window.close()
         except Exception:

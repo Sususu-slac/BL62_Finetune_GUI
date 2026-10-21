@@ -10,8 +10,9 @@ from datetime import datetime
 from pathlib import Path
 from PySide6.QtCore import Qt,QProcess,QTimer,QSettings
 from PySide6.QtGui import QColor,QPainter,QPen
-from PySide6.QtWidgets import (QWidget,QHBoxLayout,QVBoxLayout,QFormLayout,QGroupBox,QSplitter,QPushButton,QLabel,QComboBox,QLineEdit,QSpinBox,QDoubleSpinBox,QPlainTextEdit,QProgressBar,QFileDialog,QMessageBox,QScrollArea,QCheckBox)
+from PySide6.QtWidgets import (QWidget,QHBoxLayout,QVBoxLayout,QFormLayout,QGroupBox,QSplitter,QPushButton,QLabel,QComboBox,QLineEdit,QSpinBox,QDoubleSpinBox,QPlainTextEdit,QProgressBar,QFileDialog,QMessageBox,QScrollArea,QCheckBox,QDialog)
 from .gpu_monitor import GpuStatusPanel
+from . import convert_checkpoint
 from .training import TrainingSettings,DEFAULT_CONFIG,SAM3_ROOT,TRAIN_PYTHON,host_path,wsl_string,dataset_summary,render_config,command,config_name_for,load_stats
 
 class Curve(QWidget):
@@ -25,9 +26,20 @@ class Curve(QWidget):
         for a,b in zip(pts,pts[1:]):p.drawLine(int(a[0]),int(a[1]),int(b[0]),int(b[1]))
         p.setPen(QColor('#aebbd0'));p.drawText(48,30,f'{hi:.4g}');p.drawText(48,self.height()-15,f'{lo:.4g}')
 
+class ConversionDialog(QDialog):
+    def __init__(self,parent):
+        super().__init__(parent);self.setWindowTitle('Export Inference Model');self.setWindowModality(Qt.WindowModal);self.setMinimumWidth(480)
+        self.setWindowFlag(Qt.WindowCloseButtonHint,False)
+        layout=QVBoxLayout(self);self.message=QLabel('Training complete. Converting…');self.message.setWordWrap(True);layout.addWidget(self.message)
+        self.progress=QProgressBar();self.progress.setRange(0,100);self.progress.setValue(0);layout.addWidget(self.progress)
+        self.stage=QLabel('Preparing conversion…');layout.addWidget(self.stage)
+    def reject(self):pass
+    def closeEvent(self,event):event.ignore()
+
 class TrainPage(QWidget):
     def __init__(self):
-        super().__init__();self.active_settings=None;self.last_output=None;self.stopping=False;self.stop_attempts=0;self.running=False
+        super().__init__();self.active_settings=None;self.last_output=None;self.stopping=False;self.stop_attempts=0;self.running=False;self.converting=False;self.conversion_dialog=None;self.conversion_buffer="";self.conversion_error=""
+        self.conversion_process=QProcess(self);self.conversion_process.setProcessChannelMode(QProcess.MergedChannels);self.conversion_process.readyReadStandardOutput.connect(self.read_conversion);self.conversion_process.finished.connect(self.conversion_finished);self.conversion_process.errorOccurred.connect(self.conversion_process_error)
         self.prefs=QSettings('BL62','FineTuneStudio');self.process=QProcess(self);self.process.setProcessChannelMode(QProcess.MergedChannels);self.process.readyReadStandardOutput.connect(self.read_output);self.process.finished.connect(self.finished);self.process.errorOccurred.connect(self.process_error)
         self.env_process=QProcess(self);self.env_process.setProcessChannelMode(QProcess.MergedChannels);self.env_process.readyReadStandardOutput.connect(self.read_env);self.env_process.finished.connect(self.env_finished)
         self.env_process.errorOccurred.connect(lambda e:self.env_error())
@@ -113,7 +125,7 @@ class TrainPage(QWidget):
             meta=self.local_path(str(chosen)).parent.parent/'gui_launch.json'
             if meta.is_file():
                 previous=json.loads(meta.read_text(encoding='utf-8'));base=Path(previous['initial_checkpoint'])
-        return TrainingSettings(config=Path(wsl_string(Path(self.config.text()))),dataset=dataset,output=Path(wsl_string(Path(self.output.text()))),checkpoint=base,category='finetune',epochs=self.epochs.value(),batch_size=self.batch.value(),gpus=len(ids),workers=self.workers.value(),val_every=self.val_every.value(),save_every=self.save_every.value(),lr_scale=self.lr.value(),resume_from=chosen if self.mode.currentIndex()==1 else None,repository=Path(wsl_string(Path(self.repository.text()))),python=Path(wsl_string(Path(self.python.text()))),distro=self.distro.text().strip())
+        return TrainingSettings(config=Path(wsl_string(Path(self.config.text()))),dataset=dataset,output=Path(wsl_string(Path(self.output.text()))),checkpoint=base,category='finetune',epochs=self.epochs.value(),batch_size=self.batch.value(),gpus=len(ids),workers=self.workers.value(),val_every=self.val_every.value(),save_every=self.save_every.value(),lr_scale=self.lr.value(),resume_from=chosen if self.mode.currentIndex()==1 else None,repository=Path(wsl_string(Path(self.repository.text()))),python=Path(wsl_string(Path(self.python.text()))),distro=self.distro.text().strip(),export_inference=True,inference_base=base)
     def validate_settings(self):
         s=self.settings()
         for value,label in [(s.repository/'sam3/train/train.py','SAM3 repository'),(s.config,'config template'),(s.checkpoint,'checkpoint')]:
@@ -156,7 +168,7 @@ class TrainPage(QWidget):
     def save_prefs(self):
         for name in ('distro','repository','python','config'):self.prefs.setValue(name,getattr(self,name).text())
     def start_training(self):
-        if self.running:return
+        if self.running or self.converting:return
         try:
             s=self.validate_settings();self.save_prefs()
             # Freeze settings for the whole run so metrics, stop and output keep their identity.
@@ -183,8 +195,68 @@ class TrainPage(QWidget):
         self.log.appendPlainText(self.process.errorString())
         if self.process.state()==QProcess.NotRunning:self.finished(-1,None)
     def finished(self,code,status):
-        self.running=False;self.stop_timer.stop();self.set_setup_enabled(True);self.start.setEnabled(True);self.validate_btn.setEnabled(True);self.stop.setEnabled(False);self.stop.setText('Safe Stop');self.state.setText('Stopped' if self.stopping else 'Completed' if code==0 else f'Failed ({code})');self.refresh()
+        was_running=self.running
+        self.running=False;self.stop_timer.stop();self.stop.setEnabled(False);self.stop.setText('Safe Stop');self.refresh()
+        if was_running and code==0 and status==QProcess.NormalExit and not self.stopping and self.active_settings and self.active_settings.export_inference:
+            self.begin_conversion();return
+        self.state.setText('Stopped' if self.stopping else 'Completed' if code==0 else f'Failed ({code})');self.unlock_after_run()
+
+    def unlock_after_run(self):
+        self.set_setup_enabled(True);self.start.setEnabled(True);self.validate_btn.setEnabled(True)
         if self.last_output:self.output.setText(str(self.last_output)+'_'+datetime.now().strftime('%H%M%S'))
+
+    def begin_conversion(self):
+        self.converting=True;self.conversion_buffer='';self.conversion_error='';self.state.setText('Training complete. Converting…')
+        self.set_setup_enabled(False);self.start.setEnabled(False);self.validate_btn.setEnabled(False)
+        self.conversion_dialog=ConversionDialog(self);self.conversion_dialog.show()
+        self.log.appendPlainText('Training complete. Converting checkpoint to an inference model…')
+        try:
+            s=self.active_settings;out=self.local_path(str(s.output));self.inference_output=s.output/'checkpoints/checkpoint_sam3_format.pt'
+            worker=s.output/'convert_checkpoint.py'
+            # The converter is included in the packaged GUI; no torch import in the GUI process.
+            source=Path(convert_checkpoint.__file__)
+            if not source.is_file() or source.suffix!='.py':
+                source=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))/'assets/convert_checkpoint.py'
+            self.local_path(str(worker)).write_bytes(source.read_bytes())
+            args=[wsl_string(s.python),'-u',wsl_string(worker),'--base',wsl_string(s.inference_base),'--training',wsl_string(s.output/'checkpoints/checkpoint.pt'),'--output',wsl_string(self.inference_output),'--fallback-base',wsl_string(s.repository/'sam3.pt')]
+            self.shell_start(self.conversion_process,'env PYTHONNOUSERSITE=1 CUDA_VISIBLE_DEVICES= '+shlex.join(args))
+        except Exception as e:self.conversion_error=str(e);self.conversion_finished(-1,None)
+
+    def read_conversion(self):
+        self.conversion_buffer+=bytes(self.conversion_process.readAllStandardOutput()).decode('utf-8','replace')
+        while '\n' in self.conversion_buffer:
+            line,self.conversion_buffer=self.conversion_buffer.split('\n',1);self.conversion_line(line)
+
+    def conversion_line(self,line):
+        if not line.strip():return
+        if line.startswith(convert_checkpoint.PREFIX):
+            try:
+                message=json.loads(line[len(convert_checkpoint.PREFIX):])
+                if 'error' in message:self.conversion_error=message['error'];self.log.appendPlainText('Conversion error: '+self.conversion_error)
+                else:
+                    self.conversion_dialog.progress.setValue(min(100,max(0,int(message['progress']))));self.conversion_dialog.stage.setText(message['message']);self.log.appendPlainText(message['message'])
+            except (ValueError,KeyError,TypeError):self.log.appendPlainText(line)
+        else:self.log.appendPlainText(line)
+
+    def conversion_process_error(self,error):
+        if error==QProcess.FailedToStart:
+            self.conversion_error=self.conversion_process.errorString();self.conversion_finished(-1,None)
+
+    def conversion_finished(self,code,status):
+        if not self.converting:return
+        self.read_conversion()
+        if self.conversion_buffer:self.conversion_line(self.conversion_buffer);self.conversion_buffer=''
+        success=code==0 and status==QProcess.NormalExit and self.local_path(str(self.inference_output)).is_file()
+        self.converting=False
+        if self.conversion_dialog:self.conversion_dialog.done(0);self.conversion_dialog.deleteLater();self.conversion_dialog=None
+        self.unlock_after_run();self.state.setText('Training and conversion complete' if success else 'Training complete. Conversion failed');self.refresh()
+        if success:
+            self.log.appendPlainText('Inference model: '+str(self.inference_output))
+            QMessageBox.information(self,'Conversion Complete','Inference model saved:\n'+str(self.inference_output))
+        else:
+            detail=self.conversion_error or 'See Training Log for details.'
+            QMessageBox.warning(self,'Conversion Failed','Training completed. The full training checkpoint is preserved.\n'+detail)
+
     def stop_training(self):
         if not self.running:return
         self.stopping=True;self.stop_attempts=0;self.stop.setEnabled(False);self.stop.setText('Stopping…');self.state.setText('Stopping safely')
@@ -217,7 +289,10 @@ class TrainPage(QWidget):
         key,data=mapping[self.metric_selector.currentIndex()];self.curve.set_values([r.get(key) for r in data])
         if rows:
             row=rows[-1];epoch=int(row.get('Trainer/epoch',0))+1;self.epoch.setText(f'Epoch {epoch} / {s.epochs}');self.progress.setValue(min(100,round(100*epoch/s.epochs)));self.metrics.setText('  ·  '.join(f"{label} {row.get(k,0):.4g}" for label,k in [('Loss','Losses/train_all_loss'),('mIoU','Losses/train_all_miou_semantic_seg'),('Dice loss','Losses/train_all_loss_semantic_dice')]))
-        ckpt=out/'checkpoints/checkpoint.pt';self.artifacts.setText('Checkpoint: '+str(ckpt) if ckpt.exists() else 'No checkpoint yet')
+        ckpt=out/'checkpoints/checkpoint.pt';inference=out/'checkpoints/checkpoint_sam3_format.pt'
+        text='Training Checkpoint: '+str(ckpt) if ckpt.exists() else 'No checkpoint yet'
+        if inference.is_file():text+='\nInference Model: '+str(inference)
+        self.artifacts.setText(text)
     def open_output(self):
         path=self.local_path(str(self.last_output)) if self.last_output else self.local_path(self.output.text())
         if not path.is_dir():return

@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
         if not self.training.running:self.close_timer.stop();self.close()
     def closeEvent(self,event):
         if self.data.export_thread:QMessageBox.information(self,'Saving','Wait for dataset export to finish.');event.ignore();return
+        if self.training.converting:QMessageBox.information(self,'Converting','Wait for inference model conversion to finish.');event.ignore();return
         if self.training.running:
             if not self._close_after_stop:
                 if QMessageBox.question(self,'Training Running','Stop training safely and close when it exits?',QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:event.ignore();return

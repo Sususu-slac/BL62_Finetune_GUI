@@ -4,7 +4,7 @@ Independent Windows desktop application for preparing COCO datasets and managing
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.0.5.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.0.6.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. The current GUI runtime, WSL training environment, Python interpreter and SAM3 repository are displayed at the upper right on both Data and Training. The previously saved environment configuration is retained; training checks it automatically before launch.
 
@@ -40,7 +40,9 @@ Environment defaults on the original workstation:
 
 The existing environment configuration is retained per Windows user. The existing Roboflow full fine-tuning template is required; arbitrary SAM3 config schemas are not supported. Before launch, training verifies Python, SAM3 and dependencies, CUDA, visible GPUs and checkpoint structure. Metrics and full-state checkpoint paths appear on the right. Each successful new training launch clears the on-screen log; existing experiment log files remain on disk. Vertical scrollbars use the shared dark rounded style on both pages.
 
-This release saves SAM3's full training checkpoint. Creating a reduced inference-only checkpoint is a separate conversion step; no conversion is silently performed.
+After a successful training run, a progress window automatically displays **Training complete. Converting…**. The CPU worker exports `checkpoints/checkpoint_sam3_format.pt` for SAM3 inference, then shows the saved path. The full `checkpoints/checkpoint.pt` remains available for Resume Training. Both paths appear on the right. Failed or safely stopped runs do not trigger conversion; conversion failures preserve the full training checkpoint and show the error.
+
+Conversion uses the initial checkpoint as an inference template (or `sam3.pt` in the configured SAM3 repository if the initial checkpoint contains training-format keys). Trained weight names and shapes must match. Untrained tracker and optional SAM2 interactive-neck weights are retained from the template. Conversion progress reports real stages: loading, validation, writing and verification. Closing the app or starting another run waits until conversion finishes.
 
 ## Development
 
