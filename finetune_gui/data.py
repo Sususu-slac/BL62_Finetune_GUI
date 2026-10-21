@@ -112,6 +112,18 @@ class DataProject:
                 if ann['category_id']==cat_id: ann['noun_phrase']=name
         self.dirty=True
 
+    def merge_categories(self,source_id,target_id):
+        if source_id==target_id: raise ValueError('Choose two different labels')
+        known={c['id']:c for c in self.categories}
+        if source_id not in known or target_id not in known: raise ValueError('Unknown label')
+        target_name=known[target_id]['name']
+        for rec in self.images:
+            for ann in rec['annotations']:
+                if ann['category_id']==source_id:
+                    ann['category_id']=target_id;ann['noun_phrase']=target_name
+        self.categories=[c for c in self.categories if c['id']!=source_id]
+        self.dirty=True
+
     def plan_split(self,scope,percent,seed):
         if not 0<percent<100: raise ValueError('Training percentage must be between 1 and 99')
         plan=[r['split'] for r in self.images]

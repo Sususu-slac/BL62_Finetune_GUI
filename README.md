@@ -4,7 +4,7 @@ Independent Windows desktop application for preparing COCO datasets and managing
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.0.1.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.0.2.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. Configure the existing installation under **Training → Environment**, then click **Check Environment**.
 
@@ -12,7 +12,7 @@ The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drive
 
 - Open a COCO JSON, a folder containing `annotations.json` and `images/`, an existing split dataset, or an image folder.
 - Select masks, draw with Brush or Polygon, erase, delete, merge, undo/redo, zoom with the mouse wheel and pan with the middle button or Pan tool. Press Enter to finish an instance; Escape returns to Select.
-- The Label dropdown above the image changes the selected instance's category. Labels → Rename changes a category name globally.
+- The Label dropdown above the image changes the selected instance's category. Labels → Rename changes a category name globally. If the name already exists (including different capitalization), choose Merge to move all instances to the existing category, or Cancel to leave everything unchanged. Merging categories preserves each individual mask and overlap.
 - Assign the current image using Training / Validation below the canvas. Each original image-list row shows its assignment.
 - Random Split supports All Images or Unassigned Only, linked train/validation percentages and a fixed seed. Preview shows the proposed assignments.
 - **Save Dataset** is at the bottom of the left panel, immediately left of **Training →**. Select a save location and a new dataset folder name. Existing nonempty output folders are preserved.

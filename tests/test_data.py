@@ -18,6 +18,15 @@ class DataTests(unittest.TestCase):
         masks=self.p.masks(0);np.testing.assert_array_equal(masks[0]['mask'],self.mask);masks.append(copy.deepcopy(masks[0]));masks[0]['mask'][0,0]=True;self.p.commit(0,masks);self.p.apply_split(['train','train','val','']);out=self.root/'out';self.p.export(out);loaded=DataProject.load(out);self.assertEqual(len(loaded.images),4);self.assertEqual(len(loaded.masks(0)),2);np.testing.assert_array_equal(loaded.masks(0)[0]['mask'],masks[0]['mask']);self.assertEqual(hashlib.sha256(self.json.read_bytes()).hexdigest(),self.digest);self.assertTrue((out/'unassigned/images/3.png').is_file())
     def test_global_rename_updates_all(self):
         self.p.rename(1,'grain');self.assertTrue(all(a['noun_phrase']=='grain' for r in self.p.images for a in r['annotations']));self.assertRaises(ValueError,self.p.rename,1,'fragment')
+    def test_merge_categories_preserves_all_masks_and_splits_after_export(self):
+        masks=self.p.masks(0);extra=copy.deepcopy(masks[0]);extra['category_id']=2;extra['mask'][0,0]=True;masks.append(extra);self.p.commit(0,masks)
+        expected=[[m['mask'].copy() for m in self.p.masks(i)] for i in range(4)]
+        self.p.apply_split(['train','train','val','val']);self.p.merge_categories(1,2);self.assertEqual(self.p.categories,[{'id':2,'name':'fragment','supercategory':'fragment'}])
+        self.assertTrue(all(a['category_id']==2 for r in self.p.images for a in r['annotations']));out=self.root/'merged';self.p.export(out);loaded=DataProject.load(out)
+        for i in range(4):
+            actual=loaded.masks(i);self.assertEqual(len(actual),len(expected[i]))
+            for a,b in zip(actual,expected[i]):np.testing.assert_array_equal(a['mask'],b)
+        self.assertEqual([r['split'] for r in loaded.images],['train','train','val','val'])
     def test_random_remaining_and_deterministic(self):
         self.p.apply_split(['train','val','','']);a=self.p.plan_split('unassigned',80,42);b=self.p.plan_split('unassigned',80,42);self.assertEqual(a,b);self.assertEqual(a[:2],['train','val']);self.assertEqual(a.count('train'),2);self.assertEqual(a.count('val'),2)
     def test_export_refuses_existing_data(self):

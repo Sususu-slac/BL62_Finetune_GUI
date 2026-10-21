@@ -133,16 +133,42 @@ class ReviewPage(QWidget):
             cid=self.instance_label.currentData()
             if cid==self.view.masks[i]['category_id']:return
             self.push_undo();self.view.masks[i]['category_id']=cid;self.view.masks[i]['noun_phrase']=self.instance_label.currentText();self.notify('Label changed to '+self.instance_label.currentText())
+    def confirm_merge(self,source_name,target_name):
+        dialog=QMessageBox(self);dialog.setWindowTitle('Label Name Exists')
+        dialog.setIcon(QMessageBox.Question)
+        dialog.setText('This name already exists. Merge labels or cancel?')
+        dialog.setInformativeText(f'Merge "{source_name}" into "{target_name}" for all images?')
+        merge_button=dialog.addButton('Merge',QMessageBox.AcceptRole)
+        cancel_button=dialog.addButton('Cancel',QMessageBox.RejectRole)
+        dialog.setDefaultButton(cancel_button);dialog.setEscapeButton(cancel_button);dialog.exec()
+        return dialog.clickedButton() is merge_button
     def rename(self):
         cid=self.global_label.currentData()
         if cid is None:return
         name,ok=QInputDialog.getText(self,'Rename Label','Name',text=self.global_label.currentText())
         if not ok:return
+        name=name.strip()
+        target=next((c for c in self.project.categories if c['id']!=cid and c['name'].casefold()==name.casefold()),None)
+        if target and not self.confirm_merge(self.global_label.currentText(),target['name']):return
         try:
-            self.commit();self.project.rename(cid,name)
-            for m in self.view.masks:
-                if m['category_id']==cid:m['noun_phrase']=name.strip()
-            self.undo_stack=[];self.redo_stack=[];self.refresh_categories();self.notify('Label renamed globally to '+name.strip())
+            if not name:raise ValueError('Enter a label name')
+            self.commit()
+            if target:
+                old_instance_category=self.instance_label.currentData()
+                self.project.merge_categories(cid,target['id'])
+                for m in self.view.masks:
+                    if m['category_id']==cid:m['category_id']=target['id'];m['noun_phrase']=target['name']
+                self.undo_stack=[];self.redo_stack=[];self.refresh_categories()
+                self.global_label.setCurrentIndex(self.global_label.findData(target['id']))
+                if old_instance_category==cid:
+                    self._updating=True;self.instance_label.setCurrentIndex(self.instance_label.findData(target['id']));self._updating=False;self.update_metadata()
+                self.select(self.view.selected)
+                self.notify('Label merged globally into '+target['name'])
+            else:
+                self.project.rename(cid,name)
+                for m in self.view.masks:
+                    if m['category_id']==cid:m['noun_phrase']=name
+                self.undo_stack=[];self.redo_stack=[];self.refresh_categories();self.notify('Label renamed globally to '+name)
         except Exception as e:self.error(e)
     def delete(self):
         i=self.view.selected

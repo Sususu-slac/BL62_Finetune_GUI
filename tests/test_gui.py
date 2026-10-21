@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import Qt,QPoint,QSettings
+from PySide6.QtCore import Qt,QPoint,QSettings,QTimer
 from PySide6.QtWidgets import QApplication,QMessageBox
 from PySide6.QtTest import QTest
 from finetune_gui.window import MainWindow
@@ -26,6 +26,21 @@ class GuiTests(unittest.TestCase):
         self.brush((30,30),(30,30));self.d.project.categories.append({'id':2,'name':'fragment','supercategory':'fragment'});self.d.refresh_categories();self.d.select(0);self.d.instance_label.setCurrentIndex(1);self.assertEqual(self.d.view.masks[0]['category_id'],2);self.d.undo();self.assertEqual(self.d.view.masks[0]['category_id'],1)
         with patch('finetune_gui.review.QInputDialog.getText',return_value=('grain',True)):self.d.rename()
         self.assertEqual(self.d.project.categories[0]['name'],'grain');self.assertEqual(self.d.view.masks[0]['noun_phrase'],'grain')
+    def test_duplicate_rename_cancel_leaves_unsaved_strokes_and_history_unchanged(self):
+        self.brush((30,30),(30,30));self.d.project.categories.append({'id':2,'name':'fragment','supercategory':'fragment'});self.d.refresh_categories();before=copy.deepcopy(self.d.view.masks);stored=copy.deepcopy(self.d.project.images);history=len(self.d.undo_stack);dirty=self.d.image_dirty
+        with patch('finetune_gui.review.QInputDialog.getText',return_value=(' FRAGMENT ',True)),patch.object(self.d,'confirm_merge',return_value=False) as prompt:self.d.rename()
+        prompt.assert_called_once_with('particle','fragment');self.assertEqual(self.d.project.images,stored);self.assertEqual(len(self.d.undo_stack),history);self.assertEqual(self.d.image_dirty,dirty);self.assertEqual(self.d.view.masks[0]['category_id'],1);np.testing.assert_array_equal(self.d.view.masks[0]['mask'],before[0]['mask'])
+    def test_duplicate_rename_merges_current_and_other_images(self):
+        self.brush((30,30),(30,30));self.d.show_image(1);self.brush((40,40),(40,40));before=self.d.view.masks[0]['mask'].copy();self.d.project.categories.append({'id':2,'name':'fragment','supercategory':'fragment'});self.d.refresh_categories()
+        with patch('finetune_gui.review.QInputDialog.getText',return_value=('FRAGMENT',True)),patch.object(self.d,'confirm_merge',return_value=True):self.d.rename()
+        self.assertEqual(len(self.d.project.categories),1);self.assertEqual(self.d.global_label.currentText(),'fragment');self.assertEqual(self.d.view.masks[0]['category_id'],2);np.testing.assert_array_equal(self.d.view.masks[0]['mask'],before);self.assertTrue(all(a['category_id']==2 for r in self.d.project.images for a in r['annotations']));self.assertFalse(self.d.undo_stack);self.d.show_image(0);self.assertEqual(self.d.view.masks[0]['category_id'],2)
+    def test_merge_prompt_cancel_default_and_explicit_merge(self):
+        def cancel():
+            dialog=app.activeModalWidget();self.assertEqual(dialog.defaultButton().text(),'Cancel');dialog.reject()
+        QTimer.singleShot(0,cancel);self.assertFalse(self.d.confirm_merge('particle','fragment'))
+        def merge():
+            dialog=app.activeModalWidget();next(b for b in dialog.buttons() if b.text()=='Merge').click()
+        QTimer.singleShot(0,merge);self.assertTrue(self.d.confirm_merge('particle','fragment'))
     def test_delete_redo_mask_toggle_fit(self):
         self.brush((30,30),(30,30));self.d.mask_toggle.setChecked(False);self.assertFalse(self.d.view.show_labels);self.d.fit();self.d.select(0);self.d.delete();self.assertEqual(len(self.d.view.masks),0);self.d.undo();self.assertEqual(len(self.d.view.masks),1);self.d.redo();self.assertEqual(len(self.d.view.masks),0)
     def test_random_filter_and_manual_move(self):

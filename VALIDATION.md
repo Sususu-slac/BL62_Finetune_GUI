@@ -10,3 +10,7 @@
 The real run verifies training integration, not convergence or model quality. Its complete optimizer/model checkpoint was about 9.4 GiB. Saving that checkpoint through the Windows-mounted test output directory dominated the test runtime; the application's default experiment location is inside WSL. A complete second training run in Resume mode was not performed; resume configuration and full-checkpoint requirements are implemented, while the completed training run verified the standard SAM3 full-state output.
 
 No datasets, user checkpoints or test-trained model files are included in the repository or Windows distribution. The Windows distribution includes the GUI runtime; SAM3, its training environment, CUDA and weights remain separately configured under Environment.
+
+## v1.0.2 — duplicate label names
+
+22 tests passed on Windows and Linux. New coverage verifies case-insensitive duplicate-name confirmation, Cancel as the default, explicit Merge, cancellation preserving unsaved strokes and undo history, merging the current image and other images, and lossless export/reload after merging categories across train/validation splits. Individual instances and overlapping pixels remain separate.

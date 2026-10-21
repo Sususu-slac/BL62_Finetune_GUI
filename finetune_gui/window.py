@@ -28,7 +28,7 @@ class MainWindow(QMainWindow):
         self._close_after_stop=False;self.close_timer=QTimer(self);self.close_timer.setInterval(500);self.close_timer.timeout.connect(self.close_when_stopped)
     def show_status(self,text):
         self.statusBar().showMessage(text,8000)
-        if text.startswith(('Label changed','Label renamed','Dataset saved')):
+        if text.startswith(('Label changed','Label renamed','Label merged','Dataset saved')):
             self.toast.setText(text);self.toast.adjustSize();self.toast.move(max(12,(self.width()-self.toast.width())//2),self.height()-110);self.toast.raise_();self.toast.show();self.toast_timer.start(3500)
     def dataset_saved(self,path):self.training.set_dataset(path);self.save_state.setText('Dataset saved')
     def close_when_stopped(self):
