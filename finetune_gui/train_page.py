@@ -40,12 +40,13 @@ class TrainPage(QWidget):
         self.epochs=spin(1,100000,200);self.batch=spin(1,128,1);self.workers=spin(0,64,4);self.val_every=spin(1,10000,10);self.save_every=spin(0,10000,0);self.save_every.setSpecialValueText('Final only');self.lr=QDoubleSpinBox();self.lr.setDecimals(6);self.lr.setRange(.000001,10);self.lr.setValue(.05)
         for title,w in [('Epochs',self.epochs),('Batch / GPU',self.batch),('Workers',self.workers),('Validate every',self.val_every),('Save every',self.save_every),('LR scale',self.lr)]:pl.addRow(title,w)
         lv.addWidget(params);output=QGroupBox('Output');ol=QFormLayout(output);self.output,row=self.path_row('/home/subo/sam3/experiments/finetune_'+datetime.now().strftime('%Y%m%d_%H%M%S'),True);self.output_row=row;ol.addRow(row);self.open_btn=QPushButton('Open Output Folder');self.open_btn.clicked.connect(self.open_output);ol.addRow(self.open_btn);lv.addWidget(output)
-        env=QGroupBox('Environment');env.setCheckable(True);env.setChecked(False);el=QVBoxLayout(env);self.env_fields=QWidget();ef=QFormLayout(self.env_fields)
-        self.distro=QLineEdit(str(self.prefs.value('distro','Ubuntu-24.04')));ef.addRow('WSL distribution',self.distro)
-        self.repository,row=self.path_row(str(self.prefs.value('repository',str(SAM3_ROOT))),True);ef.addRow('SAM3 repository',row)
-        self.python,row=self.path_row(str(self.prefs.value('python',str(TRAIN_PYTHON))));ef.addRow('Python interpreter',row)
-        self.config,row=self.path_row(str(self.prefs.value('config',str(DEFAULT_CONFIG))));ef.addRow('Config template',row)
-        self.env_button=QPushButton('Check Environment');self.env_button.clicked.connect(self.check_environment);ef.addRow(self.env_button);el.addWidget(self.env_fields);self.env_fields.setVisible(False);env.toggled.connect(self.env_fields.setVisible);lv.addWidget(env);lv.addStretch();self._settings_groups=(dataset,ckpt,gpu,params,env)
+        # Environment values stay in the saved configuration; only the shared header displays them.
+        self._environment_config=QWidget(self);self._environment_config.hide()
+        self.distro=QLineEdit(str(self.prefs.value('distro','Ubuntu-24.04')),self._environment_config)
+        self.repository=QLineEdit(str(self.prefs.value('repository',str(SAM3_ROOT))),self._environment_config)
+        self.python=QLineEdit(str(self.prefs.value('python',str(TRAIN_PYTHON))),self._environment_config)
+        self.config=QLineEdit(str(self.prefs.value('config',str(DEFAULT_CONFIG))),self._environment_config)
+        lv.addStretch();self._settings_groups=(dataset,ckpt,gpu,params)
         scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setWidget(self.setup);scroll.setMinimumWidth(360);left=QWidget();ll=QVBoxLayout(left);ll.addWidget(scroll)
         controls=QHBoxLayout();self.validate_btn=QPushButton('Validate');self.validate_btn.clicked.connect(self.validate_clicked);self.start=QPushButton('Start Training');self.start.setObjectName('primary');self.start.clicked.connect(self.start_training);self.stop=QPushButton('Safe Stop');self.stop.setEnabled(False);self.stop.clicked.connect(self.stop_training)
         for b in (self.validate_btn,self.start,self.stop):controls.addWidget(b)
@@ -127,10 +128,10 @@ class TrainPage(QWidget):
         if self.env_process.state()!=QProcess.NotRunning:return
         try:s=self.settings() if self.dataset.text() and self.checkpoint.text() else TrainingSettings(repository=Path(wsl_string(Path(self.repository.text()))),python=Path(wsl_string(Path(self.python.text()))),gpus=len(self.gpu_ids.text().split(',')))
         except Exception as e:QMessageBox.warning(self,'Environment',str(e));return
-        self.save_prefs();self.env_button.setEnabled(False);self.state.setText('Checking environment');self.shell_start(self.env_process,self.env_script(s))
+        self.save_prefs();self.state.setText('Checking environment');self.shell_start(self.env_process,self.env_script(s))
     def read_env(self):self.log.appendPlainText(bytes(self.env_process.readAllStandardOutput()).decode('utf-8','replace').rstrip())
-    def env_finished(self,code,status):self.env_button.setEnabled(True);self.state.setText('Environment ready' if code==0 else 'Environment check failed')
-    def env_error(self):self.log.appendPlainText(self.env_process.errorString());self.env_button.setEnabled(True)
+    def env_finished(self,code,status):self.state.setText('Environment ready' if code==0 else 'Environment check failed')
+    def env_error(self):self.log.appendPlainText(self.env_process.errorString())
     def save_prefs(self):
         for name in ('distro','repository','python','config'):self.prefs.setValue(name,getattr(self,name).text())
     def start_training(self):
@@ -153,6 +154,7 @@ class TrainPage(QWidget):
             wrapper=f"{self.env_script(s,True)} || exit $?\n[ -f {stop} ] && exit 130\ncd {shlex.quote(wsl_string(s.repository))} || exit 1\nexport CUDA_VISIBLE_DEVICES={gpu}\nsetsid {train} &\nchild=$!\nprintf '%s' \"$child\" > {pid}\nif [ -f {stop} ]; then kill -INT -- -\"$child\"; fi\nwait \"$child\"\nresult=$?\nrm -f {pid}\nexit \"$result\"\n"
             # A file avoids Windows/WSL quoting differences in nested bash commands.
             script=s.output/'launch.sh';self.local_path(str(script)).write_text(wrapper,encoding='utf-8',newline='\n')
+            self.log.clear()
             self.running=True;self.stopping=False;self.last_output=s.output;self.set_setup_enabled(False);self.start.setEnabled(False);self.validate_btn.setEnabled(False);self.stop.setEnabled(True);self.state.setText('Starting');self.progress.setValue(0);self.curve.set_values([]);self.log.appendPlainText('Launching training. Environment and checkpoint are checked before GPU training.');self.shell_start(self.process,'bash '+shlex.quote(wsl_string(script)))
         except Exception as e:QMessageBox.warning(self,'Cannot Start',str(e))
     def read_output(self):self.log.appendPlainText(bytes(self.process.readAllStandardOutput()).decode('utf-8','replace').rstrip())

@@ -17,4 +17,6 @@ No datasets, user checkpoints or test-trained model files are included in the re
 
 ## v1.0.3 — output folder control
 
-22 tests passed on Windows and Linux. Training setup remains locked during a run while Open Output Folder stays enabled under the Output path. The output path controls retain their previous behavior.
+24 tests passed on Windows and Linux. Training setup remains locked during a run while Open Output Folder stays enabled under the Output path. The output path controls retain their previous behavior. The shared runtime header remains visible on both tabs, follows the retained training configuration, and replaces the removed Environment settings section.
+
+New-run logging checks confirm that a valid launch clears prior on-screen output, while failed configuration validation preserves the previous log. Vertical scrollbar styling was checked visually.

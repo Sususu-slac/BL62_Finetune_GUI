@@ -6,7 +6,7 @@ from unittest.mock import patch
 import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt,QPoint,QSettings,QTimer
-from PySide6.QtWidgets import QApplication,QMessageBox
+from PySide6.QtWidgets import QApplication,QMessageBox,QGroupBox
 from PySide6.QtTest import QTest
 from finetune_gui.window import MainWindow
 
@@ -20,6 +20,11 @@ class GuiTests(unittest.TestCase):
     def tearDown(self):self.d.project.dirty=False;self.w.close();self.w.deleteLater();app.processEvents();self.temp.cleanup()
     def brush(self,start,end):
         self.d.view.set_mode('brush');a=self.d.view.mapFromScene(*start);b=self.d.view.mapFromScene(*end);QTest.mousePress(self.d.view.viewport(),Qt.LeftButton,Qt.NoModifier,a);QTest.mouseMove(self.d.view.viewport(),b,50);QTest.mouseRelease(self.d.view.viewport(),Qt.LeftButton,Qt.NoModifier,b);app.processEvents()
+    def test_shared_runtime_header_and_removed_environment_section(self):
+        for page in (0,1):
+            self.w.tabs.setCurrentIndex(page);app.processEvents();self.assertTrue(self.w.runtime_info.isVisible());self.assertIn('sam3_finetune_wsl',self.w.runtime_info.text());self.assertIn('/home/subo/sam3',self.w.runtime_info.text())
+        self.w.training.repository.setText('/tmp/selected_sam3');self.assertIn('/tmp/selected_sam3',self.w.runtime_info.text())
+        self.assertFalse(any(g.title()=='Environment' for g in self.w.training.findChildren(QGroupBox)))
     def test_brush_erase_undo_switch_and_export(self):
         self.brush((30,30),(35,35));self.assertEqual(len(self.d.view.masks),1);painted=self.d.view.masks[0]['mask'].copy();self.assertTrue(painted.any());self.d.view.set_mode('erase');pos=self.d.view.mapFromScene(30,30);QTest.mouseClick(self.d.view.viewport(),Qt.LeftButton,Qt.NoModifier,pos);app.processEvents();self.assertLess(self.d.view.masks[0]['mask'].sum(),painted.sum());self.d.undo();np.testing.assert_array_equal(self.d.view.masks[0]['mask'],painted);self.d.redo();self.d.undo();self.d.assign('train');self.d.navigate(1);self.d.assign('val');self.d.navigate(-1);np.testing.assert_array_equal(self.d.view.masks[0]['mask'],painted);self.d.commit();self.d.project.export(self.root/'export');self.w.dataset_saved(str(self.root/'export'));self.assertEqual(self.w.training.dataset.text(),str(self.root/'export'))
     def test_instance_relabel_undo_and_global_rename(self):
@@ -58,10 +63,15 @@ class GuiTests(unittest.TestCase):
         template=self.root/'template.yaml';template.write_text('roboflow_vl_100_root: old\nexperiment_log_dir: old\nsupercategory: old\nmax_epochs: 1\nnum_train_workers: 1\nlr_scale: 1\ntrain_batch_size: 1\nval_epoch_freq: 1\ncheckpoint_path: old\nsave_freq: 0\ngpus_per_node: 1\nuse_cluster: true\n')
         checkpoint=self.root/'weights.pt';checkpoint.write_bytes(b'fixture');out=self.root/'experiment'
         t=self.w.training;t.dataset.setText(str(dataset));t.repository.setText(str(repo));t.config.setText(str(template));t.checkpoint.setText(str(checkpoint));t.output.setText(str(out));t.gpu_ids.setText('1')
+        t.log.setPlainText('Previous training log sentinel')
         with patch.object(t,'shell_start') as launch,patch.object(t,'save_prefs'):
-            t.start_training();self.assertTrue(t.running);launch.assert_called_once()
+            t.start_training();self.assertTrue(t.running);launch.assert_called_once();self.assertNotIn('Previous training log sentinel',t.log.toPlainText());self.assertIn('Launching training',t.log.toPlainText())
         script=(out/'launch.sh').read_bytes();self.assertNotIn(b'\r',script);self.assertIn(b'setsid ',script);self.assertNotIn(b"'\\home",script)
         self.assertFalse(t.dataset.isEnabled());self.assertFalse(t.output.isEnabled());self.assertTrue(t.open_btn.isEnabled());self.assertEqual(t.active_settings.gpus,1);t.running=False;t.active_settings=None;t.last_output=None
+    def test_invalid_start_preserves_existing_log(self):
+        t=self.w.training;t.log.setPlainText('Previous training output')
+        with patch.object(t,'validate_settings',side_effect=ValueError('Invalid configuration')),patch('finetune_gui.train_page.QMessageBox.warning'):t.start_training()
+        self.assertEqual(t.log.toPlainText(),'Previous training output');self.assertFalse(t.running)
     def test_polygon_merge_and_undo(self):
         self.d.view.polygon=[(2,2),(20,2),(20,20),(2,20)];self.d.view.finish_polygon();self.d.view.polygon=[(30,30),(40,30),(40,40)];self.d.view.finish_polygon();self.assertEqual(len(self.d.view.masks),2);self.d.select(0)
         with patch('finetune_gui.review.QInputDialog.getItem',return_value=('2: particle',True)):self.d.merge()
