@@ -42,7 +42,7 @@ class TrainingSettings:
     config: Path = DEFAULT_CONFIG
     dataset: Path = Path("/home/subo/sam3/dataset_split300")
     output: Path = Path("/home/subo/sam3/experiments/gui_training_run")
-    checkpoint: Path = Path("/home/subo/sam3/sam3_1.pt")
+    checkpoint: Path = Path("/mnt/d/Chcekpoints/checkpoint_demo_05142026.pt")
     category: str = "particle"
     epochs: int = 200
     batch_size: int = 1
@@ -52,7 +52,7 @@ class TrainingSettings:
     save_every: int = 10
     lr_scale: float = 0.05
     resume_from: Path | None = None
-    inference_base: Path = Path("/home/subo/sam3/sam3.pt")
+    inference_base: Path = Path("/mnt/d/Chcekpoints/checkpoint_demo_05142026.pt")
     export_inference: bool = False
     repository: Path = SAM3_ROOT
     python: Path = TRAIN_PYTHON

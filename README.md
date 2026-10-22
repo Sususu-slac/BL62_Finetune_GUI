@@ -4,7 +4,7 @@ Independent Windows desktop application for preparing COCO datasets and managing
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.0.6.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.0.7.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. The configured training environment and SAM3 repository are displayed at the upper right on both Data and Training. The previously saved environment configuration is retained; training checks it automatically before launch.
 
@@ -24,7 +24,7 @@ The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drive
 
 Settings appear in this order: Dataset, Checkpoint, GPU, Parameters, Output. Open Output Folder is directly below the Output path and stays available during training. Environment settings have been removed from the left panel; the shared upper-right header displays the current training environment and paths on both pages.
 
-One checkpoint picker serves both modes:
+Fine-tune defaults to the shared model at `D:\Chcekpoints\checkpoint_demo_05142026.pt`. One checkpoint picker serves both modes:
 
 - **Fine-tune** loads model weights and starts a new experiment.
 - **Resume Training** restores a full training checkpoint including optimizer and epoch. Select a compatible full SAM3 training checkpoint, typically `checkpoints/checkpoint.pt`. For experiments created by this GUI, `gui_launch.json` restores the initial checkpoint and checks the original dataset/GPU selection. Epochs is the total target epoch count and must exceed the saved epoch.

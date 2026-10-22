@@ -46,3 +46,7 @@ The previous real 9.4 GiB training checkpoint was successfully converted into a 
 The real exported model contains 1,465 inference tensors. All 1,134 trained tensors were compared for exact equality, as were retained tracker/interactive-neck tensors. The actual SAM3 inference loader instantiated the exported model on CPU with instance interactivity enabled, and every trained parameter in the resulting model matched the training checkpoint. Output size: 3,450,235,371 bytes; source training checkpoint: 10,081,250,310 bytes.
 
 The frozen Windows EXE passed its conversion smoke test with the bundled worker copied into WSL: all six progress stages appeared, the Qt heartbeat ticked 238 times, and the completion dialog displayed the correct Windows output path. Native screenshots verified the progress bar and completion dialog.
+
+## v1.0.7 — shared checkpoint location
+
+Fine-tune now defaults to `D:\Chcekpoints\checkpoint_demo_05142026.pt`, and the Windows installer and portable package were rebuilt. The selected 3.2 GiB checkpoint loaded successfully on CPU with `weights_only=True`; it contains 1,465 tensors totaling 3,449,659,104 bytes. The existing full-checkpoint Resume Training behavior is unchanged. All 36 Fine-tune GUI tests and four SAM3 Training GUI tests passed. Edited Python files passed `compileall`, and inspection of the rebuilt EXE's embedded bytecode confirmed the shared checkpoint path is present.

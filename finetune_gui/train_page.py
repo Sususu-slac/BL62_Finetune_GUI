@@ -46,7 +46,7 @@ class TrainPage(QWidget):
         self.helper=QProcess(self);self.helper.setProcessChannelMode(QProcess.MergedChannels);self.helper.finished.connect(self.stop_sent)
         root=QHBoxLayout(self);root.setContentsMargins(0,0,0,0);split=QSplitter();root.addWidget(split);self.setup=QWidget();lv=QVBoxLayout(self.setup)
         dataset=QGroupBox('Dataset');dl=QFormLayout(dataset);self.dataset,row=self.path_row('',True);self.dataset.setPlaceholderText('Save from Data or select a dataset');dl.addRow(row);self.dataset_info=QLabel('No dataset selected');self.dataset_info.setWordWrap(True);dl.addRow(self.dataset_info);self.dataset.editingFinished.connect(self.inspect_dataset);lv.addWidget(dataset)
-        ckpt=QGroupBox('Checkpoint');cl=QFormLayout(ckpt);self.mode=QComboBox();self.mode.addItems(['Fine-tune','Resume Training']);cl.addRow('Mode',self.mode);self.checkpoint,row=self.path_row('/home/subo/sam3/sam3_1.pt');cl.addRow(row);lv.addWidget(ckpt)
+        ckpt=QGroupBox('Checkpoint');cl=QFormLayout(ckpt);self.mode=QComboBox();self.mode.addItems(['Fine-tune','Resume Training']);cl.addRow('Mode',self.mode);self.checkpoint,row=self.path_row('/mnt/d/Chcekpoints/checkpoint_demo_05142026.pt');cl.addRow(row);lv.addWidget(ckpt)
         gpu=QGroupBox('GPU');self.gpu_layout=QVBoxLayout(gpu);self.gpu_ids=QLineEdit('0,1',gpu);self.gpu_ids.hide();self.gpu_choices={};self.update_gpu_choices([]);self.gpu_ids.textChanged.connect(self.sync_gpu_choices);lv.addWidget(gpu)
         params=QGroupBox('Parameters');pl=QFormLayout(params)
         def spin(lo,hi,value):w=QSpinBox();w.setRange(lo,hi);w.setValue(value);return w
