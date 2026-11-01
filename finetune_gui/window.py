@@ -3,7 +3,8 @@ import sys
 from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QProcess,QTimer,Qt
-from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QTabWidget,QMessageBox
+from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QTabWidget,QMessageBox,QPushButton
+from bl62_theme import ThemeController
 from .review import ReviewPage
 from .train_page import TrainPage
 from .training import wsl_string
@@ -31,10 +32,16 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__();self.setWindowTitle('BL62 SAM3 Fine-tune Studio');self.resize(1560,1000);self.setWindowIcon(QIcon(str(Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))/'assets/BL62_Finetune.ico')));root=QWidget();layout=QVBoxLayout(root);header=QHBoxLayout();title=QLabel('SAM3 Fine-tune Studio');title.setObjectName('title');header.addWidget(title);header.addStretch();self.save_state=QLabel('');header.addWidget(self.save_state);header.addSpacing(16);self.runtime_info=QLabel();self.runtime_info.setAlignment(Qt.AlignRight|Qt.AlignVCenter);self.runtime_info.setTextFormat(Qt.PlainText);self.runtime_info.setTextInteractionFlags(Qt.TextSelectableByMouse);self.runtime_info.setWordWrap(True);self.runtime_info.setMaximumWidth(850);header.addWidget(self.runtime_info,1);layout.addLayout(header)
         self.tabs=QTabWidget();self.training=TrainPage();self.data=ReviewPage(lambda:self.tabs.setCurrentIndex(1));self.data.saved.connect(self.dataset_saved);self.data.status.connect(self.show_status);self.tabs.addTab(self.data,'Data');self.tabs.addTab(self.training,'Training');layout.addWidget(self.tabs,1);self.setCentralWidget(root);self.setStyleSheet(STYLE);self.statusBar().showMessage('Ready')
+        self.theme_button=QPushButton('Switch to Light');header.addWidget(self.theme_button)
         for field in (self.training.distro,self.training.repository,self.training.python):field.textChanged.connect(self.update_runtime_info)
         self.update_runtime_info()
         self.toast=QLabel(self);self.toast.setStyleSheet('background:#245c50;color:white;border:1px solid #5ad7b6;border-radius:7px;padding:12px 20px');self.toast.hide();self.toast_timer=QTimer(self);self.toast_timer.setSingleShot(True);self.toast_timer.timeout.connect(self.toast.hide)
         self._close_after_stop=False;self.close_timer=QTimer(self);self.close_timer.setInterval(500);self.close_timer.timeout.connect(self.close_when_stopped)
+        self.theme_manager=ThemeController(self,self.theme_button,'FineTune',STYLE,
+            extra_light='QWidget{font-size:14px} QTabBar::tab{padding:11px 30px}',changed=self._theme_changed)
+    def _theme_changed(self,mode):
+        self.training.curve.update()
+        self.toast.setStyleSheet('background:#e7efff;color:#1e40af;border:1px solid #2563eb;border-radius:7px;padding:12px 20px' if mode=='light' else 'background:#245c50;color:white;border:1px solid #5ad7b6;border-radius:7px;padding:12px 20px')
     def update_runtime_info(self):
         python=wsl_string(Path(self.training.python.text()))
         repository=wsl_string(Path(self.training.repository.text()))
@@ -61,4 +68,5 @@ class MainWindow(QMainWindow):
         self.training.gpu_status.stop();self.training.save_prefs();event.accept()
 
 def run():
-    app=QApplication.instance() or QApplication(sys.argv);app.setApplicationName('BL62 Fine-tune Studio');window=MainWindow();window.show();return app.exec()
+    QApplication.setAttribute(Qt.AA_DontUseNativeDialogs,True)
+    app=QApplication.instance() or QApplication(sys.argv);app.setStyle('Fusion');app.setApplicationName('BL62 Fine-tune Studio');window=MainWindow();window.show();return app.exec()

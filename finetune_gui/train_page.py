@@ -14,17 +14,19 @@ from PySide6.QtWidgets import (QWidget,QHBoxLayout,QVBoxLayout,QFormLayout,QGrou
 from .gpu_monitor import GpuStatusPanel
 from . import convert_checkpoint
 from .training import TrainingSettings,DEFAULT_CONFIG,SAM3_ROOT,TRAIN_PYTHON,host_path,wsl_string,dataset_summary,render_config,command,config_name_for,load_stats
+from bl62_theme import current_theme
 
 class Curve(QWidget):
     def __init__(self):super().__init__();self.values=[];self.setMinimumHeight(200)
     def set_values(self,values):self.values=[float(v) for v in values if v is not None];self.update()
     def paintEvent(self,event):
-        p=QPainter(self);p.fillRect(self.rect(),QColor('#0d1523'));p.setRenderHint(QPainter.Antialiasing);p.setPen(QPen(QColor('#35435b')));p.drawRect(45,15,self.width()-65,self.height()-45)
-        if len(self.values)<2:p.setPen(QColor('#aebbd0'));p.drawText(self.rect(),Qt.AlignCenter,'Waiting for metrics');return
+        light=current_theme(self)=='light'
+        p=QPainter(self);p.fillRect(self.rect(),QColor('#ffffff' if light else '#0d1523'));p.setRenderHint(QPainter.Antialiasing);p.setPen(QPen(QColor('#c8d2dc' if light else '#35435b')));p.drawRect(45,15,self.width()-65,self.height()-45)
+        if len(self.values)<2:p.setPen(QColor('#536476' if light else '#aebbd0'));p.drawText(self.rect(),Qt.AlignCenter,'Waiting for metrics');return
         lo,hi=min(self.values),max(self.values);span=hi-lo or 1;pts=[(45+i*(self.width()-65)/(len(self.values)-1),15+(hi-v)*(self.height()-45)/span) for i,v in enumerate(self.values)]
-        p.setPen(QPen(QColor('#4de0bb'),2))
+        p.setPen(QPen(QColor('#2563eb' if light else '#4de0bb'),2))
         for a,b in zip(pts,pts[1:]):p.drawLine(int(a[0]),int(a[1]),int(b[0]),int(b[1]))
-        p.setPen(QColor('#aebbd0'));p.drawText(48,30,f'{hi:.4g}');p.drawText(48,self.height()-15,f'{lo:.4g}')
+        p.setPen(QColor('#536476' if light else '#aebbd0'));p.drawText(48,30,f'{hi:.4g}');p.drawText(48,self.height()-15,f'{lo:.4g}')
 
 class ConversionDialog(QDialog):
     def __init__(self,parent):

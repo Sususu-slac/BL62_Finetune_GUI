@@ -1,10 +1,21 @@
 # BL62 SAM3 Fine-tune GUI
 
+## Light / Dark
+
+Use the upper-right **Switch to Light** / **Switch to Dark** button. Each GUI
+remembers its own choice; new installations default to Dark. Light uses blue
+buttons and selected controls, while Dark keeps the original green accents.
+Dialogs, menus, logs, charts and progress bars follow the theme. Images, masks,
+annotation edits, histogram settings, training state and chat drafts are preserved.
+
+See [theme validation](THEME_VALIDATION_20261101.md) for the checks and their scope.
+
+
 Independent Windows desktop application for preparing COCO datasets and managing SAM3 training in WSL. It has two pages, **Data** and **Training**, with adjustable left/right layouts. Opening the app does not start training.
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.0.7.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.1.0.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. The configured training environment and SAM3 repository are displayed at the upper right on both Data and Training. The previously saved environment configuration is retained; training checks it automatically before launch.
 
@@ -29,7 +40,7 @@ Fine-tune defaults to the shared model at `D:\Chcekpoints\checkpoint_demo_051420
 - **Fine-tune** loads model weights and starts a new experiment.
 - **Resume Training** restores a full training checkpoint including optimizer and epoch. Select a compatible full SAM3 training checkpoint, typically `checkpoints/checkpoint.pt`. For experiments created by this GUI, `gui_launch.json` restores the initial checkpoint and checks the original dataset/GPU selection. Epochs is the total target epoch count and must exceed the saved epoch.
 
-GPU Device IDs are physical CUDA indices, for example `0`, `1` or `0,1`. The GPU Status panel below training progress shows every NVIDIA GPU, utilization and VRAM used/total in GiB, highlighting the selected devices. It refreshes in the background every two seconds while Training is visible and pauses on Data. Readings are device-wide and include other programs. Unavailable metrics display N/A; failed queries clear stale readings and show an unavailable status. Monitoring uses nvidia-smi without loading a model and does not write into the training log. Batch size is per GPU. Output must be a new or empty experiment directory. The application creates a separate runtime YAML and never modifies the selected template. Training settings are locked during a run. Safe Stop targets only the recorded training process group, including its distributed workers. Closing during training requests a safe stop and waits for exit.
+GPU Device IDs are physical CUDA indices, for example `0`, `1` or `0,1`. The GPU Status panel below training progress shows the selected NVIDIA GPUs only, with utilization and VRAM used/total in GiB. It refreshes in the background every two seconds while Training is visible and pauses on Data. Readings are device-wide and include other programs. Unavailable metrics display N/A; failed queries clear stale readings and show an unavailable status. Monitoring uses nvidia-smi without loading a model and does not write into the training log. Batch size is per GPU. Output must be a new or empty experiment directory. The application creates a separate runtime YAML and never modifies the selected template. Training settings are locked during a run. Safe Stop targets only the recorded training process group, including its distributed workers. Closing during training requests a safe stop and waits for exit.
 
 Environment defaults on the original workstation:
 
@@ -57,3 +68,11 @@ For a Windows EXE, install PyInstaller in the GUI Python environment and run `bu
 The icon was generated with the built-in imagegen tool using the user's BL62 Label icon as a style reference; the prompt is in `assets/icon_prompt.txt`.
 
 GPU selection uses checkboxes in the left panel. The right panel displays live utilization and VRAM for selected GPUs only. Training requires at least one selection; GPU choices stay locked during a run. Both pages show the training Environment and Repo in the shared header.
+
+## User manuals
+
+Latest English illustrated edition: **October 26, 2026**.
+
+- [PDF manual (26 pages)](docs/BL62_Finetune_GUI_User_Manual_10262026.pdf)
+- [Editable Word manual](docs/BL62_Finetune_GUI_User_Manual_10262026.docx)
+- [Documentation index](docs/README.md)
