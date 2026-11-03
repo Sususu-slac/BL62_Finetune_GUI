@@ -15,7 +15,7 @@ Independent Windows desktop application for preparing COCO datasets and managing
 
 ## Windows installation
 
-Download `BL62_Finetune_GUI_Setup_1.1.0.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
+Download `BL62_Finetune_GUI_Setup_1.1.1.exe` from [Releases](https://github.com/Sususu-slac/BL62_Finetune_GUI/releases). The installer includes the Windows GUI dependencies and creates **BL62 Fine-tune GUI** on the desktop. A portable ZIP is also available; extract the entire folder before opening the EXE.
 
 The Windows package does not bundle SAM3 weights, training data, WSL, CUDA drivers or the SAM3 training environment. The configured training environment and SAM3 repository are displayed at the upper right on both Data and Training. The previously saved environment configuration is retained; training checks it automatically before launch.
 
@@ -76,3 +76,7 @@ Latest English illustrated edition: **October 26, 2026**.
 - [PDF manual (26 pages)](docs/BL62_Finetune_GUI_User_Manual_10262026.pdf)
 - [Editable Word manual](docs/BL62_Finetune_GUI_User_Manual_10262026.docx)
 - [Documentation index](docs/README.md)
+
+## Per-user output defaults — 1.1.1
+
+New Windows training runs default to `%LOCALAPPDATA%\BL62_UserData\Training`; use the existing Output field to choose another location. `BL62_FINETUNE_OUTPUT_ROOT` can override this default. WSL distributions and training environments are registered separately for each Windows account; sharing the GUI does not register another user’s WSL environment.
